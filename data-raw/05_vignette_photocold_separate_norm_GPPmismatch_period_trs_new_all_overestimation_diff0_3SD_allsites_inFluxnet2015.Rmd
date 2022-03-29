@@ -1,0 +1,1092 @@
+---
+title: "PhotoCold"
+author: "Yunpeng Luo"
+date: "March, 29, 2022"
+output: html_document
+---
+
+## Description
+
+**After exploring the general pattern of modelling GPP vs observational GPP, the next step to identify the specific period when the mismatch between modeled GPP and observed GPP in each site-->focused in the markdown file**
+
+step1: tidy the table for GPP simulation vs GPP obs sites
+
+step2: finding the way to separate out the model early simulation period
+
+## step1: tidy the table
+```{r}
+library(kableExtra)
+library("readxl")
+table.path<-"../data-raw/raw_data/sites_info/"
+load(file=paste0(table.path,"Available_sites_info.RDA"))
+my_data<-df_sites_avai
+my_data %>%
+  kbl(caption = "Summary of sites with GPP estimation ") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+## step2: seprate the time period when model early estimation of GPP
+
+### Part1: find the method to determine the period that with early GPP estimation
+
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+library(readr)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(cowplot)
+
+#path to datasets
+path<-"../data-raw/raw_data/Merged_data/"
+load(paste0(path,"Merged_Flux_and_VIs.RDA"))
+ddf<-df_merge;rm(df_merge)
+#convert the format of date
+#ddf$date<-strptime(ddf$date,format = "%d/%m/%Y")
+# ddf$date<-as.Date(ddf$date,"%m/%d/%Y")
+
+####
+library(phenopix)
+library(zoo)
+#function: to smooth the time series
+extract_smooth_y<-function(x,df){
+  # x<-df_new$gpp_mod_FULL_f
+  # df<-0.05
+  x_sm<-SplineFit(x,df=df)
+  y<-x_sm$fit$predicted
+  return(y)
+}
+
+#function: to determine the green-up period
+#using the threshold method:
+Deter_greenup<-function(df,pos_max){
+  # df<-df_subset
+  # pos_max<-pos_max
+
+  df_sel_sos<-df %>%
+    dplyr::filter(doy<=pos_max)
+  #1) calculate the amplitude of the time series
+  #based on the 10% or 25% of amplitude:
+  mn_sos<-min(df_sel_sos$gpp_mod_norm_sm,na.rm = T)
+  mm<-max(df_sel_sos$gpp_mod_norm_sm,na.rm = T)
+  amp_sos<-mm-mn_sos
+  
+  trs_10_sos<-mn_sos+0.1*amp_sos
+  trs_25_sos<-mn_sos+0.25*amp_sos
+   
+  #2)determine the start of season(sos10, and sos25)
+  #set the sos beyond Feburary
+  N_length<-length(df_sel_sos$gpp_mod_norm_sm)
+  sos10<-which.min(abs(as.numeric(df_sel_sos$gpp_mod_norm_sm[60:N_length] - trs_10_sos)))+59
+  sos25<-which.min(abs(as.numeric(df_sel_sos$gpp_mod_norm_sm[60:N_length] - trs_25_sos)))+59
+  #3)the end of the green-up period
+  peak<-pos_max
+  #4)additional:also determine eos10 and eos25
+  df_sel_eos<-df %>%
+    dplyr::filter(doy>=pos_max)
+  mn_eos<-min(df_sel_eos$gpp_mod_norm_sm,na.rm = T)
+  amp_eos<-mm-mn_eos
+  #
+  trs_10_eos<-mn_eos+0.1*amp_eos
+  trs_25_eos<-mn_eos+0.25*amp_eos
+  #
+  eos10<-which.min(abs(as.numeric(df_sel_eos$gpp_mod_norm_sm - trs_10_eos)))
+  eos25<-which.min(abs(as.numeric(df_sel_eos$gpp_mod_norm_sm - trs_25_eos)))
+  #adjust the eos 10 and eos25
+  eos25<-eos25+peak-1
+  eos10<-eos10+peak-1
+  #
+  pos_agg<-data.frame(sos10=sos10,sos25=sos25,peak=peak,eos25=eos25,eos10=eos10)
+  #plotting demonstration:
+  # plot(df_subset$date,df$gpp_mod_norm,ylab = "Norm GPP",xlab = "",pch=".")
+  # lines(df_subset$date,df$gpp_mod_roll20,ylab = "Norm GPP",xlab = "",lwd=1.2,col="red")
+  # abline(h=c(trs_10_sos,trs_25_sos,trs_25_eos,trs_10_eos),col="red",lty=2)
+  # abline(v=df_subset$date[c(sos10,sos25,eos25,eos10)],col="red")
+  # text(df_subset$date[c(sos10,sos25,eos25,eos10)],0.8,labels = c("sos10","sos25","eos25","eos10"),col = "red",pos = c(2,4,2,4))
+  # abline(v=df_subset$date[c(peak)],col="red")
+  # text(df_subset$date[c(peak)],0.8,labels = c("peak"),col = "red",pos = c(4))
+  return(pos_agg)
+}
+# 
+##function to seprate the early GPP estimation period:
+#after checking the data(data avaiablity, data quality) in all the sites(47 sites)-->at the end, I selecting 39 sites at end:
+
+sep_data_indiffY_sepMismatch<-function(ddf,degf,Clim,PFT,site_name,avai_years){
+  # ddf<-ddf
+  # degf<-0.05  #degree of freedom for the spline smooth
+  # Clim<-"Dfa"
+  # PFT<-"DBF"
+  # site_name<-"IT-Cor"
+  # avai_years<-c(1996:2014)
+
+  ##remember add dplyr:: for instance as sometimes two same name functions might conflict with each other
+  df<-ddf %>%
+  dplyr::filter(sitename==site_name) %>%
+  dplyr::mutate(doy = yday(date), Year=year(date)) %>%
+  dplyr::filter(Year %in% avai_years)
+  #
+  Years_unique<-unique(df$Year)
+  
+    #-------------------------------------------------------------------------------
+    #Step1: normlization for all the years in one site
+    #normalized the gpp_obs and gpp_mod using the gpp_max(95 percentile of gpp)
+    #-------------------------------------------------------------------------------
+    gpp_max_obs<-quantile(df$gpp_obs,0.95,na.rm = T)
+    gpp_max_mod<-quantile(df$gpp_mod_FULL,0.95,na.rm = T)
+    df$gpp_mod_norm<-df$gpp_mod_FULL/gpp_max_mod
+    df$gpp_obs_norm<-df$gpp_obs/gpp_max_obs
+    #first to gap-fill the ts to enable the ts smoothing
+    #then smooth the time series of all the years uisng the spline(did not use at the moment)
+    #hints:do not gap-fill gpp_obs if there are long gaps in the time sereis-->for biases calculation in step 4-->need to gapfill each year
+    if(length(df$gpp_obs[!is.na(df$gpp_obs)])>30){
+      df_new<-c()
+      for(i in 1:length(Years_unique)){
+      df_t<-df[df$Year==Years_unique[i],]
+      df_t<-df_t %>%
+          mutate(gpp_mod_norm_f=na.fill(gpp_mod_norm,c("extend")),gpp_obs_norm_f= na.fill(gpp_obs_norm,c(NA,"extend",NA))) %>%
+      mutate(gpp_mod_norm_sm = extract_smooth_y(gpp_mod_norm_f,degf))
+      df_new<-rbind(df_new,df_t)
+      }
+    }
+    #
+    N<-length(df$gpp_mod_FULL)
+    #-------------------------------------------------------------------------------
+    #Step 2:Determine the green-up period for each year(using spline smoothed values): 
+    #followed analysis is based on the normlized "GPP_mod"time series(determine earlier sos)
+    #-------------------------------------------------------------------------------
+    #
+    library(zoo)
+    pos_diffYears<-c()
+    #also subset data beyond the green-up period
+    df_outgreenup<-c()
+    df_final<-c()
+    for(i in 1:length(Years_unique)){
+    df_subset<-df_new[df_new$Year==Years_unique[i],]
+    #calculate the rollmean 
+    df_subset<-df_subset%>%
+        mutate(gpp_mod_roll5=rollapply(df_subset$gpp_mod_norm_f,5,mean,fill=NA,align="center"),
+               gpp_mod_roll7=rollapply(df_subset$gpp_mod_norm_f,7,mean,fill=NA,align="center"),
+               gpp_mod_roll10=rollapply(df_subset$gpp_mod_norm_f,10,mean,fill=NA,align="center"),
+               gpp_mod_roll15=rollapply(df_subset$gpp_mod_norm_f,15,mean,fill=NA,align="center"),
+               gpp_mod_roll20=rollapply(df_subset$gpp_mod_norm_f,20,mean,fill=NA,align="center"),
+               gpp_obs_roll5=rollapply(df_subset$gpp_obs_norm_f,5,mean,fill=c(NA,"extend",NA),align="center"),
+               gpp_obs_roll7=rollapply(df_subset$gpp_obs_norm_f,7,mean,fill=c(NA,"extend",NA),align="center"),
+               gpp_obs_roll10=rollapply(df_subset$gpp_obs_norm_f,10,mean,fill=c(NA,"extend",NA),align="center"),
+               gpp_obs_roll15=rollapply(df_subset$gpp_obs_norm_f,15,mean,fill=c(NA,"extend",NA),align="center"),
+               gpp_obs_roll20=rollapply(df_subset$gpp_obs_norm_f,20,mean,fill=c(NA,"extend",NA),align="center"),
+               temp_obs_roll20=rollapply(df_subset$temp_day_fluxnet2015,20,mean,fill=c(NA,"extend",NA),align="center")
+               )
+    # pos_sim_max<-match(max(df_subset$gpp_mod_roll20,na.rm = T),df_subset$gpp_mod_roll20)
+    pos_sim_max<-match(max(df_subset$gpp_mod_norm_sm),df_subset$gpp_mod_norm_sm)
+    pos_max<-pos_sim_max
+    #finding out the start and end of the green-up period:
+    pos_agg<-Deter_greenup(df_subset,pos_max)
+    pos_diffYears<-rbind(pos_diffYears,pos_agg)
+    #separate the data beyond greenup period:
+    # pos_beyond<-c(1:c(pos_agg$sos10-1),c(c(pos_agg$peak+1):length(df_subset$date)))
+    #pos_beyond<-c(pos_agg$peak+1):length(df_subset$date)
+    pos_beyond<-c(1:c(pos_agg$sos10-1),c(c(pos_agg$eos10+1):length(df_subset$date)))
+    t_outgreenup<-df_subset[pos_beyond,]
+    df_outgreenup<-rbind(df_outgreenup,t_outgreenup)
+    df_final<-rbind(df_final,df_subset)
+    }
+    rownames(pos_diffYears)<-Years_unique
+    #-------------------------------------------------------------------------------
+    #Step 3:rolling mean of GPPobs and GPPmod for data for all the years(moving windown:5,7,10, 15, 20days)
+    #also for the data beyond green-up period-->moving to second step
+    #-------------------------------------------------------------------------------
+    # df_outgreenup<-df_outgreenup%>%
+    #     mutate(gpp_mod_roll5=rollapply(df_outgreenup$gpp_mod_norm,5,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_mod_roll7=rollapply(df_outgreenup$gpp_mod_norm,7,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_mod_roll10=rollapply(df_outgreenup$gpp_mod_norm,10,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_mod_roll15=rollapply(df_outgreenup$gpp_mod_norm,15,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_mod_roll20=rollapply(df_outgreenup$gpp_mod_norm,20,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_obs_roll5=rollapply(df_outgreenup$gpp_obs_norm,5,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_obs_roll7=rollapply(df_outgreenup$gpp_obs_norm,7,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_obs_roll10=rollapply(df_outgreenup$gpp_obs_norm,10,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_obs_roll15=rollapply(df_outgreenup$gpp_obs_norm,15,mean,na.rm=T,fill=NA,align="center"),
+    #            gpp_obs_roll20=rollapply(df_outgreenup$gpp_obs_norm,20,mean,na.rm=T,fill=NA,align="center")
+    #            )
+    #-------------------------------------------------------------------------------
+    #Step 4:Fit the Guassian norm distribution for residuals beyond the green-up period
+    #-------------------------------------------------------------------------------
+    library(MASS)
+    #calculate the residuals
+    res.gpp<-data.frame(date=df_outgreenup$date,res=c(df_outgreenup$gpp_mod_roll20 - df_outgreenup$gpp_obs_roll20))
+    res.gpp<-res.gpp[!is.na(res.gpp$res),]
+    fit_res<-fitdistr(res.gpp$res,"normal")
+    para <- fit_res$estimate
+    # hist(res_gpp,probability = TRUE)
+    # curve(dnorm(x, para[1], para[2]), col = 2, add = TRUE)
+    mu<-mean(res.gpp$res,na.rm = T)
+    p_density_res_outgreenup<-ggplot(res.gpp, aes(x=res))+
+      geom_histogram(aes(y=..density..),binwidth = 0.01,position="identity", alpha=0.3,fill="white",col="green3",)+
+      geom_density(col="forestgreen",size=1.05)+
+      stat_function(fun = dnorm, args = list(mean = mean(res.gpp$res), sd = sd(res.gpp$res)),size=1.05,col="black")+
+      geom_vline(xintercept=mu,linetype="dashed",size=1.05)+
+      theme_minimal()
+    #-------------------------------------------------------------------------------
+    #step 5:determine the GPP overestimation("over_estim") within green-up and growing season(sos-eos)
+    #and GPP overstimation happens less than 10 degree in the spring 
+    # ("is_event_less10")
+    #-------------------------------------------------------------------------------
+    Sys.setenv(tz="UTC")
+    df_diffYears<-c()
+    for(i in 1:length(Years_unique)){
+    df_subset<-df_final[df_final$Year==Years_unique[i],]
+    #A.
+    #a1.add one column to indicate the "greenup" 
+    df_subset$greenup<-rep("no",length(df_subset$date))
+    pos_agg<-pos_diffYears[i,]
+    #green-up date=yes
+    df_subset[c(df_subset$doy>=pos_agg$sos10) & c(df_subset$doy<=pos_agg$peak),]$greenup<-"yes"
+    #a2.add one column to indicate the GS(growing season) 
+    df_subset$GS<-rep("no",length(df_subset$date))
+    #GS date=yes
+    df_subset[c(df_subset$doy>=pos_agg$sos10) & c(df_subset$doy<=pos_agg$eos10),]$GS<-"yes"
+    
+    #B.
+    #b1.add one column to indciate "is_event"
+    #set the biases(gppmod-gppobs) are positive and bigger than 1.2sd as the "is_event"
+    df_subset$gpp_res<-df_subset$gpp_mod_roll20-df_subset$gpp_obs_roll20
+    #remove the NA
+    # df_subset_rmNA<-df_subset[!is.na(df_subset$gpp_res),]
+    thrs<-para[2]*3
+    #"overestimation" in the growing season
+    df_subset$over_estim<-rep("no",length(df_subset$date))
+    #for the data is not equal to NA
+    if(nrow(df_subset[c(df_subset$GS=="yes")&c(df_subset$gpp_res>thrs)&c(!is.na(df_subset$gpp_res)),])>0){
+    df_subset[c(df_subset$GS=="yes")&c(df_subset$gpp_res>thrs)&c(!is.na(df_subset$gpp_res)),]$over_estim<-"yes"}
+    #for the data is equal to NA-->not used any more
+    # temp_subset<-df_subset[c(df_subset$GS=="yes")&c(df_subset$gpp_res>thrs)&c(is.na(df_subset$gpp_res)),]
+    # if(length(temp_subset$date)>0){
+    # df_subset[c(df_subset$GS=="yes")&c(df_subset$gpp_res>thrs)&c(is.na(df_subset$gpp_res)),]$over_estim<-rep(NA,length(temp_subset$date))
+    # }
+    #b2.add on column to indicate is_event-->GPP overestimation in the green-up period
+    #"is_event"should be in the green-up period
+    df_subset$is_event<-rep("no",length(df_subset$date))
+    #for the data is not equal to NA
+    if(nrow(df_subset[c(df_subset$greenup=="yes")&c(!is.na(df_subset$gpp_res)&c(df_subset$gpp_res>thrs)),])>0){
+    df_subset[c(df_subset$greenup=="yes")&c(!is.na(df_subset$gpp_res)&c(df_subset$gpp_res>thrs)),]$is_event<-"yes"}
+    #for the data is equal to NA
+    if(length(df_subset[c(df_subset$greenup=="yes")&c(is.na(df_subset$gpp_res)),]$is_event)>0){
+      df_subset[c(df_subset$greenup=="yes")&c(is.na(df_subset$gpp_res)),]$is_event<-"NA"
+    }
+    #b3. additional filter: only selecting the time period in the first 2/3 green-up for the determination-->
+    greenup_subset<-subset(df_subset,greenup=="yes")
+    sel_thres<-min(greenup_subset$doy)+round(c(max(greenup_subset$doy)-min(greenup_subset$doy))*2/3,0)
+    df_subset[df_subset$doy>sel_thres,]$is_event<-"no"
+    ############################
+    #plotting
+    #for the "GS"
+    pos_GS<-df_subset$doy[which(df_subset$GS=="yes")]
+    ##plotting
+    # par(mfrow=c(2,1))
+    # plot(df_subset$date,df_subset$temp_day_fluxnet2015,pch=1)
+    # points(df_subset$date,df_subset$temp_obs_roll20,col="red")
+    # abline(h=c(0,10,15),col="red")
+    #
+    # plot(df_subset$date,df_subset$gpp_mod_roll20,col="red",ylim=c(-0.1,1.2))
+    # points(df_subset$date,df_subset$gpp_obs_roll20)
+    # abline(v=df_subset$date[c(min(pos_GS),max(pos_GS))])
+    #method:remove the positon of pos_overstimation when air temperature >10 (should be in the green-up period)
+    pos_temp_less10<-df_subset$doy[which(c(df_subset$is_event=="yes") & c(df_subset$temp_obs_roll20<=10))]
+    # abline(v=df_subset$date[c(min(pos_temp_less10),max(pos_temp_less10))],col="red")
+    df_subset$is_event_less10<-df_subset$GS
+    pos_rm<-setdiff(pos_GS,pos_temp_less10)
+    df_subset$is_event_less10[pos_rm]<-rep("no",length(pos_rm))
+    ##############################
+    df_subset$date<-as.POSIXct(strptime(df_subset$date,format = "%Y-%m-%d"))
+    #c.merge the data.frame
+    df_diffYears<-rbind(df_diffYears,df_subset)
+    }
+    #-------------------------------------------------------------------------------
+    #step 6:Evaluation "is_event"-->visualization and stats
+    #-------------------------------------------------------------------------------
+    #plotting+stats
+    p_diffYears<-c()
+    Pfalse_diffYears<-c()
+    for(i in 1:length(Years_unique)){
+    df_subset<-df_diffYears[df_diffYears$Year==Years_unique[i],]
+    #a.stats:positive false%= days(gpp_mod underestimation for days flaged as is_event)/days(is_event)
+    df_stats<-subset(df_subset,is_event=="yes"&!is.na(gpp_obs))
+    df_stats$flag<-rep("overEsti",length(df_stats$date))
+    for(k in 1:length(df_stats$date)){
+      ifelse(df_stats$gpp_mod_FULL[k]-df_stats$gpp_obs[k]<0,df_stats$flag[k]<-"underEsti",df_stats$flag[k]<-df_stats$flag[k])
+    }
+    Pfalse<-round(c(length(which(df_stats$flag=="underEsti"))/length(df_stats$date)*100),1)
+    Pfalse_diffYears<-rbind(Pfalse_diffYears,Pfalse)
+    #b.plotting:demonstration the original value + moving average + dividing lines
+    pos_agg<-pos_diffYears[i,]
+    pos_overestim<-df_subset$doy[which(df_subset$over_estim=="yes")]
+    pos_isevent<-df_subset$doy[which(df_subset$is_event=="yes")]
+    pos_isevent_less10<-df_subset$doy[which(df_subset$is_event_less10=="yes")]
+    
+    rect.coord_GS=data.frame(x1=df_subset$date[pos_agg[,"sos10"]],x2=df_subset$date[pos_agg[,"eos10"]], y1=min(df_subset$gpp_mod_norm,na.rm = T)-0.05, y2=max(df_subset$gpp_mod_norm,na.rm = T)+0.02)
+    rect.coord_isevent=data.frame(x1=df_subset$date[min(pos_isevent)],x2=df_subset$date[max(pos_isevent)], y1=min(df_subset$gpp_mod_norm,na.rm = T)-0.05, y2=max(df_subset$gpp_mod_norm,na.rm = T)+0.02)
+    rect.coord_isevent_less10=data.frame(x1=df_subset$date[min(pos_isevent_less10)],x2=df_subset$date[max(pos_isevent_less10)], y1=min(df_subset$gpp_mod_norm,na.rm = T)-0.05, y2=max(df_subset$gpp_mod_norm,na.rm = T)+0.02)
+#
+  
+  gg_plot<-ggplot() + 
+      geom_point(data=df_subset,aes(x=date,y = gpp_mod_norm),col=adjustcolor("tomato",0.5),pch=1)+
+      geom_line(data=df_subset,aes(x=date,y = gpp_mod_roll20,col="modelled"),lwd=1.2)+
+      geom_point(data=df_subset,aes(x=date,y = gpp_obs_norm),col=adjustcolor("black",0.5),pch=1)+
+      geom_line(data=df_subset,aes(x=date,y = gpp_obs_roll20,col="observed"),lwd=1.2)+
+      geom_vline(xintercept = df_subset$date[pos_agg[,"sos10"]],col="forestgreen",lty=2,lwd=1.2)+
+      geom_vline(xintercept = df_subset$date[pos_agg[,"peak"]],col="forestgreen",lty=2,lwd=1.2)+
+      scale_color_manual("",values = c("modelled"="red","observed"="black")) +
+      labs(title = paste0(Clim,"-",PFT,"-",site_name,":",Years_unique[i]), x = "", y = "norm GPP" )+  #(g C m-2 d-1 )
+  geom_rect(data=rect.coord_GS,mapping=aes(xmin=x1, xmax=x2, ymin=y1, ymax=y2), fill="green3",alpha=0.1)+
+  geom_vline(xintercept = df_subset[df_subset$over_estim=="yes",]$date,col=adjustcolor("steelblue2",0.3))+
+  geom_rect(data=rect.coord_isevent,mapping=aes(xmin=x1, xmax=x2, ymin=y1, ymax=y2), fill="blue",alpha=0.3)+
+  # geom_rect(data=rect.coord_isevent_less10,mapping=aes(xmin=x1, xmax=x2, ymin=y1, ymax=y2), fill="orange",alpha=0.5)+
+  theme_classic()+
+  theme(legend.position = c(0.15,0.9),legend.background = element_blank())
+  
+  ## merge the plot
+  ifelse(i==1,gg_plot<-gg_plot+theme(),gg_plot<-gg_plot+theme(legend.position = "none"))
+  # plot(gg_plot)
+  p_diffYears[[i]]<-gg_plot
+    }
+  Pfalse_diffYears<-as.data.frame(Pfalse_diffYears)
+  names(Pfalse_diffYears)<-"Pflase";rownames(Pfalse_diffYears)<-Years_unique
+    #-------------------------------------------------------------------------------
+    #step 7:Summary
+    #-------------------------------------------------------------------------------
+  df_agg<-c()
+  df_agg$pos_agg<-pos_diffYears
+  df_agg$df_agg<-df_diffYears
+  df_agg$p_den_outgreenup<-p_density_res_outgreenup
+  df_agg$Pflase<-Pfalse_diffYears
+  df_agg$p_isevent<-p_diffYears
+  return(df_agg)
+}
+```
+
+### Part 2: check all the sites (47 sites-->used 39 sites at the end)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#test
+# df_andPlot_Cfb_DBF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","DBF","DE-Hai",c(2002:2012))
+# length(df_andPlot_Dfc_GRA$p_isevent)
+# p_diffYears<-df_andPlot_Cfb_DBF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+#           p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+#           p_diffYears[[10]],p_diffYears[[11]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# plot(p_merge)
+```
+**(1) For Cfa:both for DBF, MF, and ENF sites(5 sites-->used 5 sites at the end)**
+```{r}
+my_data_Cfa<-my_data[my_data$koeppen_code=="Cfa",]
+```
+- Cfa-DBF (3 sites)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#IT-Col-->select available complete-spring years and proper summer peak year:2001,2005,2007:2011,2013:2014
+site_name<-"IT-Col"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Cfa_DBF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfa","DBF",site_name,c(2001,2005,2007:2011,2013:2014))
+length(df_andPlot_Cfa_DBF1$p_isevent)
+p_diffYears<-df_andPlot_Cfa_DBF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#IT-PT1-->select available complete-spring years and proper summer peak years:2003:2004
+site_name<-"IT-PT1"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Cfa_DBF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfa","DBF",site_name,c(2003:2004))
+length(df_andPlot_Cfa_DBF2$p_isevent)
+p_diffYears<-df_andPlot_Cfa_DBF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-MMS-->successful-->change Dfa-->Cfa compared to my former code
+df_andPlot_Cfa_DBF3<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfa","DBF","US-MMS",c(2000:2014))
+length(df_andPlot_Cfa_DBF3$p_isevent)
+p_diffYears<-df_andPlot_Cfa_DBF3$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],        
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+- Cfa-MF (1 site)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#JP-SMF-->successful
+df_andPlot_Cfa_MF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfa","MF","JP-SMF",c(2003:2006))
+length(df_andPlot_Cfa_MF$p_isevent)
+p_diffYears<-df_andPlot_Cfa_MF$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+- Cfa-ENF (1 site)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#CN-Qia-->successful
+df_andPlot_Cfa_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfa","ENF","CN-Qia",c(2003:2006))
+length(df_andPlot_Cfa_ENF$p_isevent)
+p_diffYears<-df_andPlot_Cfa_ENF$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+
+**(2) For Cfb: for DBF,MF and ENF (14 sites-->used 12 sites at the end)**
+```{r}
+my_data_Cfb<-my_data[my_data$koeppen_code=="Cfb",]
+```
+- Cfb-DBF (4 sites)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#DE-Hai-->successful
+site_name<-"DE-Hai"
+df_andPlot_Cfb_DBF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","DBF",site_name,c(2000:2012))
+length(df_andPlot_Cfb_DBF1$p_isevent)
+p_diffYears<-df_andPlot_Cfb_DBF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#DK-Sor-->successful
+site_name<-"DK-Sor"
+df_andPlot_Cfb_DBF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","DBF",site_name,c(2000:2003,2005:2013))
+length(df_andPlot_Cfb_DBF2$p_isevent)
+p_diffYears<-df_andPlot_Cfb_DBF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],       
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#FR-Fon-->successful
+site_name<-"FR-Fon"
+df_andPlot_Cfb_DBF3<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","DBF",site_name,c(2006:2013))
+length(df_andPlot_Cfb_DBF3$p_isevent)
+p_diffYears<-df_andPlot_Cfb_DBF3$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#IT-Isp
+site_name<-"IT-Isp"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Cfb_DBF4<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","DBF",site_name,c(2013:2014))
+length(df_andPlot_Cfb_DBF4$p_isevent)
+p_diffYears<-df_andPlot_Cfb_DBF4$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+- Cfb-MF (3 sites-->2 sites used at the end)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#BE-Bra --> there are no gpp_obs data-->hence not use this site
+site_name<-"BE-Bra"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Cfb_MF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","MF",site_name,c(1996:2014))
+# length(df_andPlot_Cfb_MF$p_isevent)
+# p_diffYears<-df_andPlot_Cfb_MF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+#           p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+#           p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+#           p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# plot(p_merge)
+
+#BE-Vie
+site_name<-"BE-Vie"
+df_andPlot_Cfb_MF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","MF",site_name,c(2000:2014))
+length(df_andPlot_Cfb_MF1$p_isevent)
+p_diffYears<-df_andPlot_Cfb_MF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#CH-Lae
+site_name<-"CH-Lae"
+df_andPlot_Cfb_MF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","MF",site_name,c(2005:2014))
+length(df_andPlot_Cfb_MF2$p_isevent)
+p_diffYears<-df_andPlot_Cfb_MF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+- Cfb-ENF (7 sites-->6 sites used at the end)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#DE-Lkb
+site_name<-"DE-Lkb"
+df_andPlot_Cfb_ENF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2010:2013))
+length(df_andPlot_Cfb_ENF1$p_isevent)
+p_diffYears<-df_andPlot_Cfb_ENF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#DE-Obe
+site_name<-"DE-Obe"
+df_andPlot_Cfb_ENF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2008:2014))
+length(df_andPlot_Cfb_ENF2$p_isevent)
+p_diffYears<-df_andPlot_Cfb_ENF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#DE-Tha
+site_name<-"DE-Tha"
+df_andPlot_Cfb_ENF3<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2000:2014))
+length(df_andPlot_Cfb_ENF3$p_isevent)
+p_diffYears<-df_andPlot_Cfb_ENF3$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#FR-LBr
+site_name<-"FR-LBr"
+df_andPlot_Cfb_ENF4<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2001,2004:2008))
+length(df_andPlot_Cfb_ENF4$p_isevent)
+p_diffYears<-df_andPlot_Cfb_ENF4$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#IT-La2 -->only have one complete year, hence do not use
+site_name<-"IT-La2"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Cfb_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2001,2004:2008))
+# length(df_andPlot_Cfb_ENF$p_isevent)
+# p_diffYears<-df_andPlot_Cfb_ENF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# plot(p_merge)
+
+#IT-Lav-->successful
+site_name<-"IT-Lav"
+df_andPlot_Cfb_ENF5<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2003:2014))
+length(df_andPlot_Cfb_ENF5$p_isevent)
+p_diffYears<-df_andPlot_Cfb_ENF5$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],        
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#NL-Loo
+site_name<-"NL-Loo"
+df_andPlot_Cfb_ENF6<-sep_data_indiffY_sepMismatch(ddf,0.05,"Cfb","ENF",site_name,c(2000:2013))
+length(df_andPlot_Cfb_ENF6$p_isevent)
+p_diffYears<-df_andPlot_Cfb_ENF6$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+
+**(3) For Cfc: 0 sites**
+```{r}
+my_data_Cfc<-my_data[my_data$koeppen_code=="Cfc",]
+```
+
+**(4) For Dfa: 0 sites **
+```{r}
+my_data_Dfa<-my_data[my_data$koeppen_code=="Dfa",]
+```
+
+**(5) For Dfb: for DBF, MF and ENF (14 sites-->used 10 sites in the end) **
+```{r}
+my_data_Dfb<-my_data[my_data$koeppen_code=="Dfb",]
+```
+- Dfb-DBF (6 site-->used 5 sites in the end)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#JP-MBF
+site_name<-"JP-MBF"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Dfb_DBF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","DBF",site_name,c(2004:2005))
+length(df_andPlot_Dfb_DBF1$p_isevent)
+p_diffYears<-df_andPlot_Dfb_DBF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-UMB
+site_name<-"US-UMB"
+df_andPlot_Dfb_DBF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","DBF",site_name,c(2000:2014))
+length(df_andPlot_Dfb_DBF2$p_isevent)
+p_diffYears<-df_andPlot_Dfb_DBF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],        
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-UMd
+site_name<-"US-UMd"
+df_andPlot_Dfb_DBF3<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","DBF",site_name,c(2008:2014))
+length(df_andPlot_Dfb_DBF3$p_isevent)
+p_diffYears<-df_andPlot_Dfb_DBF3$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],      
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-Ha1-->successful
+site_name<-"US-Ha1"
+df_andPlot_Dfb_DBF4<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","DBF",site_name,c(2000:2012))
+length(df_andPlot_Dfb_DBF4$p_isevent)
+p_diffYears<-df_andPlot_Dfb_DBF4$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-Wcr
+site_name<-"US-WCr"
+df_andPlot_Dfb_DBF5<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","DBF",site_name,c(2000:2006,2011:2014))
+length(df_andPlot_Dfb_DBF5$p_isevent)
+p_diffYears<-df_andPlot_Dfb_DBF5$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-Wi3-->lack early spring observation
+site_name<-"US-Wi3"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+# df_andPlot<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","DBF","US-WCr",c(2002,2004))
+# length(df_andPlot$p_agg)
+# p_diffYears<-df_andPlot$p_agg
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# plot(p_merge)
+
+```
+- Dfb-MF (2 sites-->used 2 sites)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#US-PFa-->successful
+site_name<-"US-PFa"
+df_andPlot_Dfb_MF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","MF",site_name,c(2000:2004,2006:2014))
+length(df_andPlot_Dfb_MF1$p_isevent)
+p_diffYears<-df_andPlot_Dfb_MF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],        
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#US-Syv
+site_name<-"US-Syv"
+df_andPlot_Dfb_MF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","MF",site_name,c(2002:2006,2014))
+length(df_andPlot_Dfb_MF2$p_isevent)
+p_diffYears<-df_andPlot_Dfb_MF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+```
+- Dfb-ENF (6 sites-->used 3 sites in the end)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+
+#CZ-BK1-->successful
+site_name<-"CZ-BK1"
+df_andPlot_Dfb_ENF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","ENF",site_name,c(2004:2008))
+length(df_andPlot_Dfb_ENF1$p_isevent)
+p_diffYears<-df_andPlot_Dfb_ENF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#RU-Fyo-->successful
+site_name<-"RU-Fyo"
+df_andPlot_Dfb_ENF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","ENF",site_name,c(2000:2001,2003:2014))
+length(df_andPlot_Dfb_ENF2$p_isevent)
+p_diffYears<-df_andPlot_Dfb_ENF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],        
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#US-GLE-->successful
+site_name<-"US-GLE"
+df_andPlot_Dfb_ENF3<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2006:2014))
+length(df_andPlot_Dfb_ENF3$p_isevent)
+p_diffYears<-df_andPlot_Dfb_ENF3$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#US-Wi0-->do not use as one year and lack spring data
+site_name<-"US-Wi0"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Dfc_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2006:2014))
+# length(df_andPlot_Dfc_ENF$p_isevent)
+# p_diffYears<-df_andPlot_Dfc_ENF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+#           p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# print(p_merge)
+
+#US-Wi4-->do not use as lack spring data
+site_name<-"US-Wi4"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Dfc_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2002:2005))
+# length(df_andPlot_Dfc_ENF$p_isevent)
+# p_diffYears<-df_andPlot_Dfc_ENF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# print(p_merge)
+
+#US-Wi9-->do not use as lack spring data
+site_name<-"US-Wi9"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Dfc_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2004:2005))
+# length(df_andPlot_Dfc_ENF$p_isevent)
+# p_diffYears<-df_andPlot_Dfc_ENF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# print(p_merge)
+```
+
+**(6) For Dfc:for ENF sites (14 sites--> used 12 sites at the end)**
+```{r}
+my_data_Dfc<-my_data[my_data$koeppen_code=="Dfc",]
+```
+- Dfc-ENF (14 sites-->at the end used 12 sites)
+```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}
+#CA-Man
+site_name<-"CA-Man"
+df_andPlot_Dfc_ENF1<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2000:2003,2007:2008))
+length(df_andPlot_Dfc_ENF1$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF1$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#CA-NS1-->successful
+site_name<-"CA-NS1"
+df_andPlot_Dfc_ENF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2003:2005))
+length(df_andPlot_Dfc_ENF2$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF2$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#CA-NS2-->selected the years with early spring
+site_name<-"CA-NS2"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Dfc_ENF3<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2002:2004))
+length(df_andPlot_Dfc_ENF3$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF3$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#CA-NS3-->succesful
+site_name<-"CA-NS3"
+df_andPlot_Dfc_ENF4<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2002:2005))
+length(df_andPlot_Dfc_ENF4$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF4$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#CA-NS4
+site_name<-"CA-NS4"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Dfc_ENF5<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2003,2005))
+length(df_andPlot_Dfc_ENF5$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF5$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#CA-NS5
+site_name<-"CA-NS5"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Dfc_ENF6<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2002:2005))
+length(df_andPlot_Dfc_ENF6$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF6$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#CA-Qfo
+site_name<-"CA-Qfo"
+df_andPlot_Dfc_ENF7<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2004:2010))
+length(df_andPlot_Dfc_ENF7$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF7$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#CA-SF1-->do not use as no early Spring data 
+site_name<-"CA-SF1"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Dfc_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2004:2006))
+# length(df_andPlot_Dfc_ENF$p_isevent)
+# p_diffYears<-df_andPlot_Dfc_ENF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+#           p_diffYears[[7]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# plot(p_merge)
+
+#CA-SF2-->do not use as no early Spring data
+site_name<-"CA-SF2"
+# df<-ddf %>%
+#   dplyr::filter(sitename==site_name)
+# df_andPlot_Dfc_ENF<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2004:2006))
+# length(df_andPlot_Dfc_ENF$p_isevent)
+# p_diffYears<-df_andPlot_Dfc_ENF$p_isevent
+# p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+#           p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+#           p_diffYears[[7]],
+#           labels = "auto",ncol=3,label_size = 12,align = "hv")
+# plot(p_merge)
+
+#FI-Hyy
+site_name<-"FI-Hyy"
+df_andPlot_Dfc_ENF8<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2000:2014))
+length(df_andPlot_Dfc_ENF8$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF8$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+##IT-Ren
+site_name<-"IT-Ren"
+df_andPlot_Dfc_ENF9<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2002:2003,2005:2013))
+length(df_andPlot_Dfc_ENF9$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF9$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-GBT
+site_name<-"US-GBT"
+df<-ddf %>%
+  dplyr::filter(sitename==site_name)
+df_andPlot_Dfc_ENF10<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2002:2003))
+length(df_andPlot_Dfc_ENF10$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF10$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+print(p_merge)
+
+#US-NR1-->successful
+site_name<-"US-NR1"
+df_andPlot_Dfc_ENF11<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF",site_name,c(2000:2014))
+length(df_andPlot_Dfc_ENF11$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF11$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
+          p_diffYears[[4]],p_diffYears[[5]],p_diffYears[[6]],
+          p_diffYears[[7]],p_diffYears[[8]],p_diffYears[[9]],
+          p_diffYears[[10]],p_diffYears[[11]],p_diffYears[[12]],
+          p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+#US-Prr-->select the early Spring data
+site_name<-"US-Prr"
+df_andPlot_Dfc_ENF12<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfc","ENF","US-Prr",c(2011:2012))
+length(df_andPlot_Dfc_ENF12$p_isevent)
+p_diffYears<-df_andPlot_Dfc_ENF12$p_isevent
+p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],
+          labels = "auto",ncol=3,label_size = 12,align = "hv")
+plot(p_merge)
+
+```
+
+**(7) For Dfd:for ENF sites(0 sites)**
+```{r}
+my_data_Dfd<-my_data[my_data$koeppen_code=="Dfd",]
+```
+
+##updates: 11-19
+## step3: save the data that label with "is_event"
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#put the results together
+#do not add Dfb_DBF4
+df_all<-list(df_andPlot_Cfa_DBF1,df_andPlot_Cfa_DBF2,df_andPlot_Cfa_DBF3,
+             df_andPlot_Cfa_MF,df_andPlot_Cfa_ENF,  #5
+    df_andPlot_Cfb_DBF1,df_andPlot_Cfb_DBF2,df_andPlot_Cfb_DBF3,df_andPlot_Cfb_DBF4,
+    df_andPlot_Cfb_MF1,df_andPlot_Cfb_MF2,
+    df_andPlot_Cfb_ENF1,df_andPlot_Cfb_ENF2,df_andPlot_Cfb_ENF3,
+    df_andPlot_Cfb_ENF4,df_andPlot_Cfb_ENF5,df_andPlot_Cfb_ENF6, #17
+    df_andPlot_Dfb_DBF1,df_andPlot_Dfb_DBF2,df_andPlot_Dfb_DBF3,
+    df_andPlot_Dfb_DBF4,df_andPlot_Dfb_DBF5,
+    df_andPlot_Dfb_MF1,df_andPlot_Dfb_MF2,
+    df_andPlot_Dfb_ENF1,df_andPlot_Dfb_ENF2,df_andPlot_Dfb_ENF3,#27
+    df_andPlot_Dfc_ENF1,df_andPlot_Dfc_ENF2,df_andPlot_Dfc_ENF3,
+    df_andPlot_Dfc_ENF4,df_andPlot_Dfc_ENF5,df_andPlot_Dfc_ENF6,
+    df_andPlot_Dfc_ENF7,df_andPlot_Dfc_ENF8,df_andPlot_Dfc_ENF9,
+    df_andPlot_Dfc_ENF10,df_andPlot_Dfc_ENF11,df_andPlot_Dfc_ENF12 #39
+    )
+
+names(df_all)<-c("IT-Cor","IT-PT1","US-MMS",
+                 "JP-SMF","CN-Qia", #5
+                 "DE-Hai","DK-Sor","FR-Fon","IT-Isp",
+                 "BE-Vie","CH-Lae",
+                 "DE-Lkb","DE-Obe","DE-Tha",
+                 "FR-LBr","IT-Lav","NL-Loo", #17
+                 "JP-MBF","US-UMB","US-UMd",
+                 "US-Ha1","US-WCr",
+                 "US-PFa","US-Syv",
+                 "CZ-Bk1","RU-Fyo","US-GLE",#27
+                 "CA-Man","CA-NS1","US-NS2", 
+                 "CA-NS3","CA-NS4","CA-NS5",
+                 "CA-Qfo","FI-Hyy","IT-Ren",
+                 "US-GBT","US-NR1","US-Prr")#39
+ddf_labeled<-c()
+for(i in 1:length(df_all)){
+  ddf_labeled<-rbind(ddf_labeled,df_all[[i]]$df_agg)
+}
+#save the data:
+save.path<-"../data/data_used/"
+save(ddf_labeled,file=paste0(save.path,"ddf_labeled_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
+save(df_all,file=paste0(save.path,"df_all_results/df_all_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
+```
+
+
+## Summary
+
+### steps to determine the "is_event" period
+
+    
+    **Step1: normlization for all the years in one site**
+     
+    #normalized the gpp_obs and gpp_mod using the gpp_max(95 percentile of gpp)
+    
+    
+    **Step 2:Determine the green-up period for each year(using spline smoothed values):** 
+    
+    #followed analysis is based on the normlized "GPP_mod"time series(determine earlier sos)
+    
+    - using the normalized GPP_mod to determine sos,eos and peak of the time series (using the threshold, percentile 10 of amplitude, to determine the sos and eos in this study). We selected the GPP_mod to determine the phenophases as genearlly we can get earlier sos compared to GPP_obs--> we can have larger analysis period
+    - update in Aug,31,2011-->limit the sos late than Feburary(Doy:60)-->in order to remove some unrelastic sos
+    
+    **Step 3:rolling mean of GPPobs and GPPmod for data for all the years(moving windown:5,7,10, 15, 20days)**
+    
+    **also for the data beyond green-up period--> the code of this steps moves to second step**
+    
+    - at the end, I select the 20 days windows for the rolling mean
+    
+    
+    **Step 4:Fit the Guassian norm distribution for residuals beyond the green-up period**
+    
+    - The reason to conduct this are: we assume in general the P-model assume the GPP well outside the green-up period (compared to the observation data). 
+    
+    - But in practise, the model performance is not always good beyond the green-up period-->I tested three data range:
+    
+      a. [peak,265/366]
+      
+      b. DoY[1, sos]& DOY[peak,365/366]
+      
+      c. [1,sos] & [eos,365/366]
+      
+    I found the using the data range c, the distrbution of biase (GPP_mod - GPP_obs) is more close to the norm distribution, hence at end of I used the data range c to build the distribution.
+    
+    
+    **step 5:determine the "is_event" within green-up period**
+    
+      - After some time of consideration, I took following crition to determine the "is_event":
+      
+        1) during the green-up period (sos,peak)-->the data with GPP biases bigger than 3 SD are classified as the "GPP overestimation points"
+        2) For "GPP overestimation points" --> only regard the data points in the first 2/3 green-up period as the "is_event"
+        
+        3) For "is_event points", thoses are air temparture is less than 10 degrees will be classified as the "is_event_less10". I selected 10 degree as the crition by referring to the paper Duffy et al., 2021 and many papers which demonstrate the temperature response curve normally from 10 degree (for instance: Lin et al., 2012)
+      
+        References:
+        
+        Duffy et al., 2021:https://advances.sciencemag.org/content/7/3/eaay1052
+        
+        Lin et al., 2012:https://academic.oup.com/treephys/article/32/2/219/1657108
+        
+      
+    **step 6:Evaluation "is_event"-->visualization and stats**
+    
+     - two ways to evaluate if "is_event" is properly determined:
+     
+      1) visulization
+      
+      2) stats:
+      $$
+      Pfalse = /frac{days(real_{(is-event)})}{days(flagged_{(is-event)})} 
+      $$

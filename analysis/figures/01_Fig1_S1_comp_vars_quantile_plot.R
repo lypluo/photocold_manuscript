@@ -138,11 +138,16 @@ df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep20,5,60,0,10,FALSE
 #1)LUE=GPP/fAPAR*ppfd
 #unit-->GPP: umol m-2 s-1; ppdf-->umol m-2 s-1; fAPRA: unitless
 #2)GRVI=(gcc-rcc)/c(gcc+rcc)
+#3)albedo:alpha_SW<-SW_OUT/SW_IN; alpha_ppdf<-PPFD_IN/PPFD_OUT
+#4)approximated fAPARchl=EVI*factor(factor = 1)
 for(i in 1:length(df_len5_nonnorm)){
   #
   df_proc<-df_len5_nonnorm[[i]]
   df_proc$LUE<-df_proc$gpp_obs/c(df_proc$fapar_itpl*df_proc$ppfd_fluxnet2015)
   df_proc$GRVI<-c(df_proc$gcc_90-df_proc$rcc_90)/c(df_proc$gcc_90+df_proc$rcc_90)
+  df_proc$alpha_SW<-df_proc$SW_OUT_fullday_mean_fluxnet2015/df_proc$SW_IN_fullday_mean_fluxnet2015
+  df_proc$alpha_PPFD<-df_proc$PPFD_OUT_fullday_mean_fluxnet2015/df_proc$PPFD_IN_fullday_mean_fluxnet2015
+  df_proc$fAPAR_chl<-df_proc$evi*1
   #assign value back:
   df_len5_nonnorm[[i]]<-df_proc
 }
@@ -345,7 +350,7 @@ p_gpp_biaes_len5_b60<-plot_2groups(df_len5_nonnorm,"gpp_res","(umol m-2 s-1)",do
 #LUE
 p_LUE_len5_b60<-plot_2groups(df_len5_nonnorm,"LUE","",do_norm = FALSE,FALSE)
 #for ppfd
-p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = FALSE)
+p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
 #fapar_spl and fapar_itpl
 p_fapar_itpl_len5_b60<-plot_2groups(df_len5_nonnorm,"fapar_itpl","",do_norm = FALSE,do_legend = FALSE)
 #some modifying in the plot:
@@ -357,7 +362,7 @@ p_gpp_biaes_len5_b60$plot<-p_gpp_biaes_len5_b60$plot+
   ylab(expression("GPP bias"*" (g "*"m"^-2*" d"^-1*")"))
 p_ppfd_len5_b60$plot<-p_ppfd_len5_b60$plot+
   xlab("")+
-  ylab(expression("ppfd"*" (u mol "*"m"^-2*" s"^-1*")"))
+  ylab(expression("PAR"*" (u mol "*"m"^-2*" s"^-1*")"))
 p_fapar_itpl_len5_b60$plot<-p_fapar_itpl_len5_b60$plot+
   xlab("")+
   ylab("fapar")
@@ -367,7 +372,7 @@ p_fapar_itpl_len5_b60$plot<-p_fapar_itpl_len5_b60$plot+
 #-->there is no temp_min/temp_max,SW_IN,TS_1,SWC_1 data for original Fluxnet2015 data tidied from Beni
 #-------------
 #temp_day
-p_temp_day_len5_b60<-plot_2groups(df_len5_nonnorm,"temp_day_fluxnet2015","(degreeC)",do_norm = FALSE,FALSE)
+p_temp_day_len5_b60<-plot_2groups(df_len5_nonnorm,"temp_day_fluxnet2015","(degreeC)",do_norm = FALSE,TRUE)
 #temp_min
 p_temp_min_len5_b60<-plot_2groups(df_len5_nonnorm,"temp_min_fluxnet2015","(degreeC)",do_norm = FALSE,do_legend = FALSE)
 #temp_max
@@ -400,7 +405,7 @@ p_vpd_day_len5_b60$plot<-p_vpd_day_len5_b60$plot+
 p_SW_IN_len5_b60$plot<-p_SW_IN_len5_b60$plot+
   ylab(expression("SW_IN"*" (W"*" m"^-2*")"))
 p_TS_1_len5_b60$plot<-p_TS_1_len5_b60$plot+
-  ylab("TS (°C)")
+  ylab(expression("T"[soil]*" (°C)"))
 p_SWC_1_len5_b60$plot<-p_SWC_1_len5_b60$plot+
   ylab("SWC (%)")
 #--------------
@@ -425,6 +430,18 @@ p_NIRv_len5_b60$plot<-p_NIRv_len5_b60$plot+
   ylab("NIRv")
 p_cci_len5_b60$plot<-p_cci_len5_b60$plot+
   ylab("CCI")
+################fAPAR and abledo####################
+#fAPARchl
+p_fapar_chl_len5_b60<-plot_2groups(df_len5_nonnorm,"fAPAR_chl","",do_norm = FALSE,TRUE)
+#albedo_SW
+p_albedo_SW_len5_b60<-plot_2groups(df_len5_nonnorm,"alpha_SW","",do_norm = FALSE,TRUE)
+p_albedo_SW_len5_b60$plot<-p_albedo_SW_len5_b60$plot+
+  ylab("Albedo")
+  
+#albedo_ppfd
+p_albedo_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"alpha_PPFD","",do_norm = FALSE,TRUE)
+
+
 ##########PhenoCam############
 #gcc_90
 p_gcc_90_len5_b60<-plot_2groups(df_len5_nonnorm,"gcc_90","",do_norm = FALSE,TRUE)
@@ -491,11 +508,28 @@ p_merge_new<-plot_grid(
 # ggsave(paste0(save.path,"p_new_merged.png"),p_merge_new,width = 20,height = 13)
 #Figure 1:
 p_merge_1<-plot_grid(
-  p_LUE_len5_b60$plot,p_fapar_itpl_len5_b60$plot,
   p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure1_ppfd_Tmin.png"),p_merge_1,width = 20,height = 13)
+ggsave(paste0(save.path,"Figure1_ppfd_Tmin.png"),p_merge_1,width = 15,height = 8)
+
+#Figure Sxx:
+p_merge_S<-plot_grid(
+  p_temp_day_len5_b60$plot,p_temp_max_len5_b60$plot,
+  p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
+  labels = "auto",ncol=2,label_size = 18,align = "hv"
+)
+ggsave(paste0(save.path,"FigureS_other_drivers.png"),p_merge_S,width = 15,height = 12)
+
+#Figure Sxx-->fAPAR and fAPARcanopy->test
+p_merge_S_fAPAR<-plot_grid(
+  p_fapar_itpl_len5_b60$plot,p_fapar_chl_len5_b60$plot,
+  labels = "auto",ncol=2,label_size = 18,align = "hv") ##dose not looks great
+p_merge_S_albedo<-plot_grid(
+  p_albedo_SW_len5_b60$plot,p_albedo_ppfd_len5_b60$plot,
+  labels = "auto",ncol=2,label_size = 18,align = "hv") ###alpha_ppfd does not large differences between 2
+#save abledo from SW
+ggsave(paste0(save.path,"FigureS_albedo_SW.png"),p_albedo_SW_len5_b60$plot)
 
 #--------------
 #IV.stats-->difference test

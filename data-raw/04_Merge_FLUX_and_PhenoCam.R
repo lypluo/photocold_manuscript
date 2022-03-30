@@ -17,8 +17,11 @@ df_YP_daily$Date<-ymd(df_YP_daily$Date)
 #"ppfd_fluxnet2015" corresponds to "ppfd_in_fluxnet2015"--> to combine with Beni's datasets, I used the first name
 #adopt the "temp_day_fluxnet" name from Beni's dataset to represent mean daily temperature
 names(df_YP_daily)<-c("sitename","date","temp_day_fluxnet2015","temp_min_fluxnet2015","temp_max_fluxnet2015",
-                      "SW_IN_fluxnet2015","patm_fluxnet2015","prec_fluxnet2015","ws_fluxnet2015",
-                      "ppfd_fluxnet2015","ppfd_out_fluxnet2015","vpd_day_fluxnet2015",
+                      "SW_IN_fullday_mean_fluxnet2015","SW_IN_midday_mean_fluxnet2015","SW_IN_midday_max_fluxnet2015",
+                      "SW_OUT_fullday_mean_fluxnet2015","SW_OUT_midday_mean_fluxnet2015","SW_OUT_midday_max_fluxnet2015",
+                      "PPFD_IN_fullday_mean_fluxnet2015","PPFD_IN_midday_mean_fluxnet2015","PPFD_IN_midday_max_fluxnet2015",
+                      "PPFD_OUT_fullday_mean_fluxnet2015","PPFD_OUT_midday_mean_fluxnet2015","PPFD_OUT_midday_max_fluxnet2015",
+                      "patm_fluxnet2015","prec_fluxnet2015","ws_fluxnet2015","vpd_day_fluxnet2015",
                       "nee","gpp_nt","gpp_dt",
                       "TS_1_fluxnet2015","TS_2_fluxnet2015","TS_3_fluxnet2015","TS_4_fluxnet2015","TS_5_fluxnet2015","TS_6_fluxnet2015",
                       "TS_7_fluxnet2015",
@@ -78,7 +81,7 @@ for (i in 1:nrow(df_Koen_sel)) {
 }
 #
 visdat::vis_miss(df_Koen.forcing,warn_large_data = FALSE)
-visdat::vis_miss(df_merge_daily,warn_large_data = FALSE)
+# visdat::vis_miss(df_merge_daily,warn_large_data = FALSE)
 #comparison between df_Koen and df_merge_daily for tmin and tmax:
 tt1<-df_merge_daily[,c("sitename","date","temp_day_fluxnet2015",
                        "temp_min_fluxnet2015","temp_max_fluxnet2015","vpd_day_fluxnet2015")]
@@ -107,7 +110,7 @@ load.path<-"./data-raw/raw_data/processed_data_from_PhenoCam/"
 load(paste0(load.path,"Daily_data.RDA"))
 df.Phenocam_daily$date<-as.Date(df.Phenocam_daily$date)
 #
-df_merge<-merge(df_merge_daily,df.Phenocam_daily,by=c("sitename","date"),all.x = T)
+df_merge<-merge(df_merge_daily,df.Phenocam_daily,by=c("sitename","date","doy"),all.x = T)
 
 #------------------------------------
 #(3)load the daily VIs including CCI, EVI...

@@ -1021,7 +1021,7 @@ for(i in 1:length(df_all)){
 #save the data:
 save.path<-"../data/data_used/"
 save(ddf_labeled,file=paste0(save.path,"ddf_labeled_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
-save(df_all,file=paste0(save.path,"df_all_results/df_all_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
+# save(df_all,file=paste0(save.path,"df_all_results/df_all_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
 ```
 
 

@@ -37,7 +37,7 @@ ori.zip.path<-"D:/CES/Data_for_use/Fluxnet_Data/Download_data/"
 exdir.path<-'D:/CES/Data_for_use/Fluxnet_Data/Preprocessed_data/Unzip_ori_HH_data'
 
 ### for the selected sites for the analysis:
-sites.path<-"./data-raw/raw_data/"
+sites.path<-"./data-raw/raw_data/sites_info/"
 load(paste0(sites.path,"Pre_selected_sites_info.RDA"))
 #unzip the files-->have already done this before
 # sites_goingto_processed<-df_sites_sel$sitename
@@ -88,6 +88,7 @@ subset_interest_vars<-function(proc.path,sel_site){
   pos_TIMESTAMP<-grep("TIMESTAMP",vars_names)
   pos_TA<-c(match("TA_F",vars_names),match("TA_F_QC",vars_names))
   pos_SW_IN<-c(match("SW_IN_F",vars_names),match("SW_IN_F_QC",vars_names))
+  pos_SW_OUT<-c(grep("SW_OUT",vars_names))
   pos_PA_F<-grep("PA_F",vars_names)
   pos_P_F<-grep("P_F",vars_names)
   pos_WS_F<-grep("WS_F",vars_names)
@@ -98,7 +99,7 @@ subset_interest_vars<-function(proc.path,sel_site){
   pos_TS_F_MDS<-grep("TS_F",vars_names)
   pos_SWC_F_MDS<-grep("SWC_F",vars_names)
   #sel vars position:
-  pos_all<-c(pos_TIMESTAMP,pos_TA,pos_SW_IN,pos_PA_F,pos_P_F,pos_WS_F,pos_PPFD,pos_VPD,
+  pos_all<-c(pos_TIMESTAMP,pos_TA,pos_SW_IN,pos_SW_OUT,pos_PA_F,pos_P_F,pos_WS_F,pos_PPFD,pos_VPD,
              pos_NEE_VUT_REF,pos_GPP_VUT_REF,pos_TS_F_MDS,pos_SWC_F_MDS)
   df_sel<-df[,pos_all]
   #tidy the format for the half hourly data:
@@ -153,6 +154,7 @@ df_all$VPD_F<-df_all$VPD_F*100
 df_all$VPD_F_MDS<-df_all$VPD_F_MDS*100
 #
 #the sites according Beni' datasets-->from Fluxnet2015
+setwd("D:/Github/photocold_manuscript/")
 save.path<-"./data-raw/raw_data/processed_data_from_FLUX2015/"
 #for the other available sites in FLUXNET2015:
 save(df_all,file=paste0(save.path,"HH_data.RDA"))
@@ -166,7 +168,7 @@ library(plyr)
 #----------------
 #I.for the sites accoring to the Fluxnet2015 tidy by Beni:
 #first to select the variables interested:
-sel_variables<-c("sitename","TIMESTAMP_START","TA_F","SW_IN_F",
+sel_variables<-c("sitename","TIMESTAMP_START","TA_F","SW_IN_F","SW_OUT",
                  "PA_F","P_F","WS_F","PPFD_IN","PPFD_OUT","VPD_F",  
                  "NEE_VUT_REF",
                  "GPP_NT_VUT_REF","GPP_DT_VUT_REF",
@@ -177,14 +179,24 @@ df_all_sel<-df_all[,sel_variables]
 df_all_sel$Date<-format(df_all_sel$TIMESTAMP_START,format = "%Y-%m-%d")
 df_all_sel$HH<-hour(df_all_sel$TIMESTAMP_START)
 #summarize the data to daily 
-#for VPD,only using the data in the day time (HH>=6 <=18)-->set the VPD value == NA for non-day 
+#-for VPD,only using the data in the day time (HH>=6 <=18)-->set the VPD value == NA for non-day 
 df_all_sel[df_all_sel$HH<6 | df_all_sel$HH>18,]$VPD_F<-NA
+#-for SW_IN, SW_OUT, ppfd_IN, and ppfd_OUT-->calculated daily mean, daily midday(10-14) mean, and daily midday max
+df_all_sel_Rg<-df_all_sel[,c("SW_IN_F","SW_OUT","PPFD_IN","PPFD_OUT","HH")]
+df_all_sel_Rg[df_all_sel$HH<10 | df_all_sel$HH>14,]<-NA
+names(df_all_sel_Rg)<-c(paste0(c("SW_IN_F","SW_OUT","PPFD_IN","PPFD_OUT"),"_midday"),"HH")
+#
+df_all_sel<-cbind(df_all_sel,df_all_sel_Rg[,c(1:4)]) #do not add "HH"
+
 
 df_all_sel_daily<-plyr::ddply(df_all_sel,.(sitename,Date),summarise,
   Ta_mean=mean(TA_F,na.rm = T),TA_min=min(TA_F,na.rm = T),TA_max=max(TA_F,na.rm = T),
-  SW_IN_mean=mean(SW_IN_F,na.rm = T),PA_mean=mean(PA_F,na.rm = T),P=sum(P_F,na.rm = T),
+  SW_IN_fullday_mean=mean(SW_IN_F,na.rm = T),SW_IN_midday_mean=mean(SW_IN_F_midday,na.rm=T),SW_IN_midday_max=max(SW_IN_F_midday,na.rm = T),
+  SW_OUT_fullday_mean=mean(SW_OUT,na.rm=T),SW_OUT_midday_mean=mean(SW_OUT_midday,na.rm=T),SW_OUT_midday_max=max(SW_OUT_midday,na.rm = T),
+  PPFD_IN_fullday_mean=mean(PPFD_IN,na.rm=T),PPFD_IN_midday_mean=mean(PPFD_IN_midday,na.rm=T),PPFD_IN_midday_max=max(PPFD_IN_midday,na.rm = T),
+  PPFD_OUT_fullday_mean=mean(PPFD_OUT,na.rm=T),PPFD_OUT_midday_mean=mean(PPFD_OUT_midday,na.rm=T),PPFD_OUT_midday_max=max(PPFD_OUT_midday,na.rm = T),
+  PA_mean=mean(PA_F,na.rm = T),P=sum(P_F,na.rm = T),
   WS_mean=mean(WS_F,na.rm = T),
-  PPFD_IN_mean=mean(PPFD_IN,na.rm = T),PPFD_OUT_mean=mean(PPFD_OUT,na.rm = T),
   VPD_day_mean=mean(VPD_F,na.rm=T),
   NEE_mean=mean(NEE_VUT_REF,na.rm=T),
   GPP_NT_mean=mean(GPP_NT_VUT_REF,na.rm = T),GPP_DT_mean=mean(GPP_DT_VUT_REF,na.rm = T),

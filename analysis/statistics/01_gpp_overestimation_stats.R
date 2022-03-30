@@ -51,6 +51,7 @@ p_density<-ggplot(df.plot, aes(x=doy, col=category,fill=category))+
 library(ggpubr)
 library(gridExtra)
 p_merge<-ggarrange(p_hist,p_density,ncol=2,align = "hv",common.legend=TRUE)
+print(p_merge)
 # p_merge<-plot_grid(p_hist,p_density,
 #                    labels = "auto",ncol=2,label_size = 12,align = "hv")
 #save the plot

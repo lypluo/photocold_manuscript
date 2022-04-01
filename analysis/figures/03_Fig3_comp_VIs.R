@@ -65,11 +65,12 @@ for(i in 1:length(sites)){
     NDVI<-ncvar_get(nc,"NDVI")
     NIRv<-ncvar_get(nc,"NIRv")
     kNDVI<-ncvar_get(nc,"kNDVI")
-    
+    #calculating GRVI:
+    GRVI_MODIS<-c(b_green - b_red)/c(b_green + b_red)
     ##b.create the df
     #produce the new datasets
     df.temp<-data.frame(sitename=rep(sitename,N),date=Date,b_blue=b_blue,b_green=b_green,b_red=b_red,
-                        b_nir=b_nir,EVI=EVI,NDVI=NDVI,NIRv=NIRv,kNDVI=kNDVI)
+                        b_nir=b_nir,EVI=EVI,NDVI=NDVI,NIRv=NIRv,kNDVI=kNDVI,GRVI_MODIS=GRVI_MODIS)
     df.VIs<-rbind(df.VIs,df.temp)
   }
 }
@@ -100,10 +101,11 @@ df.VI_new %>%
   filter(PFT=="DBF") %>%
   group_by(sitename,doy)%>%
   dplyr::summarise(doy=mean(doy),mean_gcc=mean(gcc_90,na.rm=T),
-                   mean_EVI=mean(EVI,na.rm=T))%>%
+                   mean_EVI=mean(EVI,na.rm=T),mean_MODIS_GRVI=mean(GRVI_MODIS,na.rm=T))%>%
   ggplot()+
-    geom_point(aes(x=doy,y=mean_gcc,col="gcc"))+
+    # geom_point(aes(x=doy,y=mean_gcc,col="gcc"))+
     # geom_point(aes(x=doy,y=mean_EVI,col="EVI"))+
+    geom_point(aes(x=doy,y=mean_MODIS_GRVI,col="MODIS_GRVI"))+
     facet_grid(~sitename)
 df.DBF<-df.VI_new %>%
   filter(PFT=="DBF")%>%
@@ -152,11 +154,11 @@ df.ENF%>%
 plot_VIs<-function(df,PFT_name,VI_source){
   # df<-df.VI_new
   # PFT_name<-"ENF"
-  # VI_source<-"PhenoCam"
+  # VI_source<-"MODIS"
   
   #
   df.proc<-df %>%
-    dplyr::select(sitename,date,EVI,NDVI,NIRv,kNDVI,
+    dplyr::select(sitename,date,EVI,NDVI,NIRv,kNDVI,GRVI_MODIS,
               gcc_90,rcc_90,GRVI,flag,year,month,doy,PFT)%>%
     filter(PFT==PFT_name)
   #test
@@ -215,9 +217,10 @@ plot_VIs<-function(df,PFT_name,VI_source){
                        NDVI=mean(NDVI,na.rm=T),
                        EVI=mean(EVI,na.rm=T),
                        NIRv=mean(NIRv,na.rm=T),
-                       kNDVI=mean(kNDVI,na.rm=T)
+                       kNDVI=mean(kNDVI,na.rm=T),
+                       GRVI_MODIS=mean(GRVI_MODIS,na.rm=T)
       )%>%
-      pivot_longer(c(GCC,RCC,GRVI,NDVI,EVI,NIRv,kNDVI),names_to = "Source",values_to = "VIs")
+      pivot_longer(c(GCC,RCC,GRVI,NDVI,EVI,NIRv,kNDVI,GRVI_MODIS),names_to = "Source",values_to = "VIs")
     
  
     #plotting:
@@ -242,8 +245,12 @@ plot_VIs<-function(df,PFT_name,VI_source){
       annotate(geom = "text",x=200,y=-0.1,label=PFT_name,col="blue",size=8)
   }
   if(VI_source=="MODIS"){
+    # New facet label names for Source variable-->change "GRVI_MODIS" to "GRVI"
+    Source.labs <- c("EVI","GRVI","NDVI")
+    names(Source.labs) <- c("EVI", "GRVI_MODIS","NDVI")
+    
     p_plot<-df_summary %>%
-      filter(Source %in% c("NDVI","EVI","NIRv"))%>%
+      filter(Source %in% c("NDVI","EVI","GRVI_MODIS"))%>%
       ggplot(aes(x=doy,y=VIs,col=flag))+
       geom_point()+
       annotate("rect",xmin=69,xmax=147,ymin = -Inf,ymax = Inf,alpha=0.2)+
@@ -256,7 +263,11 @@ plot_VIs<-function(df,PFT_name,VI_source){
             axis.title = element_text(size=24),
             axis.text = element_text(size = 20),
             text = element_text(size=24))+
-      annotate(geom = "text",x=200,y=-0.1,label=PFT_name,col="blue",size=8)
+      annotate(geom = "text",x=200,y=-0.1,label=PFT_name,col="blue",size=8)+
+      facet_grid(
+        . ~ Source, 
+        labeller = labeller(Source = Source.labs)
+      )
   }
   
   return(p_plot)

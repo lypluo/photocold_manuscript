@@ -142,7 +142,7 @@ Clim.PFTs<-sort(unique(df_merge$Clim_PFTs))
 #I should use the same value to normlize the gpp and gpp_mod:
 gpp_P95<-df_merge %>%
   group_by(sitename) %>%
-  summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
+  dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
 #
 df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
 df_merge.new<-df_merge.new %>%
@@ -230,7 +230,7 @@ df_final_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs,doy) %>%
   # group_by(sitename,doy) %>%
-  summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
+  dplyr::summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
           mean_Ta=mean(temp,na.rm=T),
           mean_Tmin=mean(tmin,na.rm=T),
           mean_Tmax=mean(tmax,na.rm=T),
@@ -246,7 +246,7 @@ df_final_new %>%
 df_final_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs,doy) %>%
-  summarise(VPD=mean(vpd,na.rm=T))%>%
+  dplyr::summarise(VPD=mean(vpd,na.rm=T))%>%
   ggplot(aes(doy,VPD))+
   geom_line()+
   facet_grid(~Clim_PFTs)
@@ -254,7 +254,7 @@ df_final_new %>%
 df_final_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs,doy) %>%
-  summarise(mean_prec=mean(prec,na.rm=T))%>%
+  dplyr::summarise(mean_prec=mean(prec,na.rm=T))%>%
   ggplot(aes(doy,mean_prec))+
   geom_line()+
   facet_grid(~Clim_PFTs)
@@ -262,7 +262,7 @@ df_final_new %>%
 df_final_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs,doy) %>%
-  summarise(mean_ppfd=mean(ppfd,na.rm=T))%>%
+  dplyr::summarise(mean_ppfd=mean(ppfd,na.rm=T))%>%
   ggplot(aes(doy,mean_ppfd))+
   geom_line()+
   facet_grid(~Clim_PFTs)
@@ -270,7 +270,7 @@ df_final_new %>%
 df_final_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs,doy) %>%
-  summarise(mean_fapar=mean(fapar_itpl,na.rm=T))%>%
+  dplyr::summarise(mean_fapar=mean(fapar_itpl,na.rm=T))%>%
   ggplot(aes(doy,mean_fapar))+
   geom_line()+
   facet_grid(~Clim_PFTs)
@@ -278,7 +278,7 @@ df_final_new %>%
 df_final_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs,doy) %>%
-  summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
+  dplyr::summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
             gpp_mod_old=mean(gpp_mod_FULL_ori,na.rm=T),
             gpp_mod_new=mean(gpp_mod_recent_ori,na.rm=T))%>%
   pivot_longer(c(gpp_obs,gpp_mod_old,gpp_mod_new),
@@ -369,10 +369,31 @@ plot_modobs_general
 #   facet_wrap(~Clim_PFTs)
 
 #update using original p-model
+##
+nsites<-df_modobs %>%
+  group_by(Clim_PFTs)%>%
+  dplyr::summarise(nsite=length(unique(sitename)))
+nsites$label<-paste0("N = ",nsites$nsite)
+sites_num.info<-data.frame(
+  doy=rep(20,nrow(nsites)),
+  gpp=rep(14,nrow(nsites)),
+  nsites
+)
+#
+tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
+                      hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
+  
+  gb <- ggplot_build(p)
+  lay <- gb$layout$layout
+  tags <- cbind(lay, label = paste0(open, tag_pool[lay$PANEL], close), x = x, y = y)
+  p + geom_text(data = tags, aes_string(x = "x", y = "y", label = "label"), ..., hjust = hjust, 
+                vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE) 
+}
+
 season_plot<-df_modobs %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(Clim_PFTs, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
@@ -380,14 +401,15 @@ season_plot<-df_modobs %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                "mod_recent_optim" = "steelblue1", "obs" = "black"),
+                                "mod_recent_optim" = "green4", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","EC based")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "Day of year") +
-  annotate(geom="text",x=200,y=2,label="")+
+  # annotate(geom="text",x=200,y=2,label="")+
   facet_wrap(~Clim_PFTs)+
   theme(
     legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
     axis.title = element_text(size=24),
     axis.text = element_text(size = 20),
     text = element_text(size=24),
@@ -397,12 +419,17 @@ season_plot<-df_modobs %>%
     # legend.background = element_blank(),
     legend.position = c(0.75,0.1)
   )
+#
 
 #print the plot
-season_plot
+library(egg)
+season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp,
+          tag_pool = sites_num.info$label,size=5)
+# annotate(geom = "text",x=sites_num.info$x,
+  #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure4_pmodel_vs_obs.png"),season_plot,width = 15,height = 10)
+ggsave(paste0(save.path,"Figure6_pmodel_vs_obs_forClimPFTs.png"),season_plot_new,width = 15,height = 10)
 
 
 ##########################################################################

@@ -290,6 +290,6 @@ plot_Cam_final<-plot_grid(DBF_Cam_VIs,ENF_Cam_VIs,nrow = 2,labels = "AUTO")
 plot_MODIS_final<-plot_grid(DBF_MODIS_VIs,ENF_MODIS_VIs,nrow = 2,labels = "AUTO")
 #save the plots:
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure3_PhenoCam_VIs.png"),plot_Cam_final,width = 15,height = 10)
+ggsave(paste0(save.path,"Figure4_PhenoCam_VIs.png"),plot_Cam_final,width = 15,height = 10)
 ggsave(paste0(save.path,"FigureS_MODIS_VIs.png"),plot_MODIS_final,width = 15,height = 10)
 

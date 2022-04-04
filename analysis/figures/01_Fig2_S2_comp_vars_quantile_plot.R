@@ -151,6 +151,11 @@ for(i in 1:length(df_len5_nonnorm)){
   #assign value back:
   df_len5_nonnorm[[i]]<-df_proc
 }
+#----calculate the mean T between "overestimated site" and "non-overestimated site"--
+#only using the data bebtween Jan and June:
+##the code is in "photocold_manuscript/test/"
+
+
 #-------------------------------------------------------------------------
 #(4)going to compare the "event" and "non-event" site
 #-------------------------------------------------------------------------
@@ -511,7 +516,7 @@ p_merge_1<-plot_grid(
   p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure1_ppfd_Tmin.png"),p_merge_1,width = 15,height = 8)
+ggsave(paste0(save.path,"Figure2_ppfd_Tmin.png"),p_merge_1,width = 15,height = 8)
 
 #Figure Sxx:
 p_merge_S<-plot_grid(

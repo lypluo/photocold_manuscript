@@ -241,7 +241,7 @@ comp_boxplot<-function(df,comp_yvar,do_legend,end_xylab,PFT_name){
     geom_boxplot()+
     # annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+  #
     scale_fill_manual("",values = c("GPP overestimated sites"=adjustcolor("tomato",1),
-                    "GPP non-overestimated sites"=adjustcolor("cyan3",1)))+
+                    "GPP non-overestimated sites"=adjustcolor("green4",1)))+
     theme_classic()+
     theme(legend.position = c(0.2,0.95),legend.background = element_blank(),
           legend.text = element_text(size=20),
@@ -392,7 +392,7 @@ ggsave(paste0(save.path,"FigureS_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 25,h
 p_ppfd_Tmin<-plot_grid(p_ppfd_midday_mean_tmin_all,p_ppfd_midday_mean_tmin_DBF,
                         p_ppfd_midday_mean_tmin_MF,p_ppfd_midday_mean_tmin_ENF,
                         nrow = 2,ncol=2,labels = "auto",label_size = 20)
-ggsave(paste0(save.path,"Figure2_boxplot_ppfd_Tmin.png"),p_ppfd_Tmin,width = 25,height = 15)
+ggsave(paste0(save.path,"Figure3_boxplot_ppfd_Tmin.png"),p_ppfd_Tmin,width = 25,height = 15)
 #test albedo
 p_albedo1<-plot_grid(p_SW_midday_mean_alpha_SW_all,p_SW_midday_mean_alpha_SW_DBF,
                     p_SW_midday_mean_alpha_SW_MF,p_SW_midday_mean_alpha_SW_ENF,

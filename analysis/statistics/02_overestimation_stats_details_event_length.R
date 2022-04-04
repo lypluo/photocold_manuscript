@@ -43,10 +43,10 @@ summary_fun<-function(df){
 #
 df_sites_events<-summary_fun(df_sites_sel)
 ###add the flag for sites: "
-df_oversites_events$flag<-rep("Oversites",length(df_oversites_events$sitename))
-df_no_oversites_events$flag<-rep("No_oversites",length(df_no_oversites_events$sitename))
-df_beyondsites_events$flag<-rep("Beyondsites",length(df_beyondsites_events$sitename))
-df_events_all<-rbind(rbind(df_oversites_events,df_no_oversites_events),df_beyondsites_events)
+# df_oversites_events$flag<-rep("Oversites",length(df_oversites_events$sitename))
+# df_no_oversites_events$flag<-rep("No_oversites",length(df_no_oversites_events$sitename))
+# df_beyondsites_events$flag<-rep("Beyondsites",length(df_beyondsites_events$sitename))
+# df_events_all<-rbind(rbind(df_oversites_events,df_no_oversites_events),df_beyondsites_events)
 #
 #
 df_events_all<-df_sites_events

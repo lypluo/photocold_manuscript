@@ -49,19 +49,18 @@ df_avai$date<-mdy(df_avai$date)
 save(df_sites_avai,file=paste0(load.path,"Available_sites_info.RDA"))
 
 #-----------------------------------------
-#c. keep the variables that Beni's datasets(df_avai) have, and add other variables from df_all_daily
+#c. keep the variables that Beni's datasets(df_avai) have
 #to check how much data are available in different datasets:
 # visdat::vis_miss(df_avai, warn_large_data = FALSE)
 # visdat::vis_miss(df_YP_daily,warn_large_data = FALSE)
-
 pos<-match(names(df_avai[,-c(1:2)]),names(df_YP_daily[,-c(1:2)]))
 pos_del<-pos[!is.na(pos)]+2  #real position should +2
-df_YP_daily_temp<-df_YP_daily[,-pos_del]
-
+df_YP_daily_temp<-df_YP_daily[,-pos_del] 
+#specifically, I remove the following varaiables I calculated:temp_day,vpd_day,prec,patm
 #get the merged datasets-->merge both df_avai and df_YP_daily_temp
 library(reshape2)
 df_merge_daily<-merge(df_avai,df_YP_daily_temp,by = c("sitename","date"),all.x = T)
-
+visdat::vis_miss(df_merge_daily,warn_large_data = FALSE)
 #--------------------------------------------
 #d. load the updated drivers data from Koen:
 load.path<-"./data-raw/raw_data/Data_prep_by_Koen/"
@@ -84,8 +83,8 @@ visdat::vis_miss(df_Koen.forcing,warn_large_data = FALSE)
 # visdat::vis_miss(df_merge_daily,warn_large_data = FALSE)
 #comparison between df_Koen and df_merge_daily for tmin and tmax:
 tt1<-df_merge_daily[,c("sitename","date","temp_day_fluxnet2015",
-                       "temp_min_fluxnet2015","temp_max_fluxnet2015","vpd_day_fluxnet2015")]
-tt2<-df_Koen.forcing[,c("sitename","date","temp","tmin","tmax","vpd")]
+                       "temp_min_fluxnet2015","temp_max_fluxnet2015","vpd_day_fluxnet2015","PPFD_IN_fullday_mean_fluxnet2015")]
+tt2<-df_Koen.forcing[,c("sitename","date","temp","tmin","tmax","vpd","ppfd")]
 tt<-left_join(tt1,tt2,by=c("sitename","date"))
 #well matched!
 plot(tt$temp,tt$temp_day_fluxnet2015)
@@ -95,14 +94,21 @@ plot(tt$tmax,tt$temp_max_fluxnet2015)
 abline(0,1,col="blue",lty=2)
 plot(tt$vpd,tt$vpd_day_fluxnet2015)
 abline(0,1,col="blue",lty=2)
-#using data from Koen to substitute the tmin and tmax in df_merge_daily:
-df_Koen.forcing_sel<-df_Koen.forcing[,c("sitename","date","tmin","tmax")]
-df_merge_daily<-left_join(df_merge_daily,df_Koen.forcing,by=c("sitename","date"))
-df_merged_daily<-df_merge_daily %>%
-  mutate(temp_min_fluxnet2015=tmin,
-         temp_max_fluxnet2015=tmax,
-         tmin=NULL,
-         tmax=NULL)
+plot(tt$ppfd*1000000,tt$PPFD_IN_fullday_mean_fluxnet2015) 
+#Koen ppfd's unit is "mol m-2 s-1", mine is "umol m-2 s-1"
+abline(0,1,col="blue",lty=2)
+###############
+#some adjustments-->in this analysis, we temporily do not use subsituate the data  as both data sources match quite well
+#using data from Koen to substitute the following variables in df_merge_daily (to keep the variables complete):
+#varables: tmin and tmax
+###############
+# df_Koen.forcing_sel<-df_Koen.forcing[,c("sitename","date","tmin","tmax")]
+# df_merge_daily<-left_join(df_merge_daily,df_Koen.forcing,by=c("sitename","date"))
+# df_merged_daily<-df_merge_daily %>%
+#   mutate(temp_min_fluxnet2015=tmin,
+#          temp_max_fluxnet2015=tmax,
+#          tmin=NULL,
+#          tmax=NULL)
 #------------------------------------
 #(2)load the daily PhenoCam data and merge to df_flux_merge
 #------------------------------------
@@ -110,7 +116,7 @@ load.path<-"./data-raw/raw_data/processed_data_from_PhenoCam/"
 load(paste0(load.path,"Daily_data.RDA"))
 df.Phenocam_daily$date<-as.Date(df.Phenocam_daily$date)
 #
-df_merge<-merge(df_merge_daily,df.Phenocam_daily,by=c("sitename","date","doy"),all.x = T)
+df_merge<-merge(df_merge_daily,df.Phenocam_daily,by=c("sitename","date"),all.x = T)
 
 #------------------------------------
 #(3)load the daily VIs including CCI, EVI...

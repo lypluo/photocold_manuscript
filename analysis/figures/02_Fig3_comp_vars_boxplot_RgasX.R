@@ -151,7 +151,7 @@ df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep20,5,60,0,10,FALSE
 for(i in 1:length(df_len5_nonnorm)){
   #
   df_proc<-df_len5_nonnorm[[i]]
-  df_proc$LUE<-df_proc$gpp_obs/c(df_proc$fapar_itpl*df_proc$ppfd_fluxnet2015)
+  df_proc$LUE<-df_proc$gpp_obs/c(df_proc$fapar_itpl*df_proc$PPFD_IN_fullday_mean_fluxnet2015)
   # df_proc$GRVI<-c(df_proc$gcc_90-df_proc$rcc_90)/c(df_proc$gcc_90+df_proc$rcc_90)
   df_proc$alpha_SW<-df_proc$SW_OUT_fullday_mean_fluxnet2015/df_proc$SW_IN_fullday_mean_fluxnet2015
   df_proc$alpha_PPFD<-df_proc$PPFD_OUT_fullday_mean_fluxnet2015/df_proc$PPFD_IN_fullday_mean_fluxnet2015
@@ -290,7 +290,8 @@ comp_boxplot<-function(df,comp_yvar,do_legend,end_xylab,PFT_name){
 
 #A1a).classification:
 df_bins_SW_IN_all<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,70),"SW_IN_midday_mean_fluxnet2015",8,FALSE,"All PFTs")
-df_bins_ppfd_all<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"ppfd_fluxnet2015",8,FALSE,"All PFTs")
+#change "ppfd_fluxnet2015" to "PPFD_IN_fullday_mean_fluxnet2015"/PPFD_IN_midday_mean_fluxnet2015
+df_bins_ppfd_all<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"PPFD_IN_fullday_mean_fluxnet2015",8,FALSE,"All PFTs")
 
 #A1b).plotting--->update in March,2022
 #----------------
@@ -317,10 +318,13 @@ p_ppfd_midday_alpha_PPFD_all<-comp_boxplot(df_bins_ppfd_all,c("alpha_PPFD"),FALS
 #------------------------------
 #A1c).change the labels 
 p_SW_midday_mean_tmin_all<-p_SW_midday_mean_tmin_all+
-  xlab("")
+  xlab("")+
+  ylab(expression("T"[min]*" (°C)"))
   # xlab(expression("SW"[IN]*" midday mean (W m"^-2*")"))
+  
 p_ppfd_midday_mean_tmin_all<-p_ppfd_midday_mean_tmin_all+
-  xlab("")
+  xlab("")+
+  ylab(expression("T"[min]*" (°C)"))
   # xlab(expression("PAR (umol m"^-2*"s"^-1*")"))
 
 ########
@@ -330,9 +334,9 @@ df_bins_SW_IN_DBF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,70),"SW_IN_midda
 df_bins_SW_IN_MF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,70),"SW_IN_midday_mean_fluxnet2015",8,FALSE,"MF")
 df_bins_SW_IN_ENF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,70),"SW_IN_midday_mean_fluxnet2015",8,FALSE,"ENF")
 #
-df_bins_ppfd_DBF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"ppfd_fluxnet2015",8,FALSE,"DBF")
-df_bins_ppfd_MF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"ppfd_fluxnet2015",8,FALSE,"MF")
-df_bins_ppfd_ENF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"ppfd_fluxnet2015",8,FALSE,"ENF")
+df_bins_ppfd_DBF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"PPFD_IN_fullday_mean_fluxnet2015",8,FALSE,"DBF")
+df_bins_ppfd_MF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"PPFD_IN_fullday_mean_fluxnet2015",8,FALSE,"MF")
+df_bins_ppfd_ENF<-Classify_Nbins_andPlot(df_len5_nonnorm,c(-60,80),"PPFD_IN_fullday_mean_fluxnet2015",8,FALSE,"ENF")
 
 ##For SW
 p_SW_midday_mean_tmin_DBF<-comp_boxplot(df_bins_SW_IN_DBF,c("temp_min_fluxnet2015"),FALSE,
@@ -366,7 +370,8 @@ p_SW_midday_mean_tmin_DBF<-p_SW_midday_mean_tmin_DBF+
   xlab("")+
   ylab("")
 p_SW_midday_mean_tmin_MF<-p_SW_midday_mean_tmin_MF+
-  xlab(expression("SW"[IN]*" midday mean (W m"^-2*")"))
+  xlab(expression("SW"[IN]*" midday mean (W m"^-2*")"))+
+  ylab(expression("T"[min]*" (°C)"))
 p_SW_midday_mean_tmin_ENF<-p_SW_midday_mean_tmin_ENF+
   ylab("")+
   xlab(expression("SW"[IN]*" midday mean (W m"^-2*")"))
@@ -376,10 +381,11 @@ p_ppfd_midday_mean_tmin_DBF<-p_ppfd_midday_mean_tmin_DBF+
   ylab("")
   # xlab(expression("PAR (umol m"^-2*"s"^-1*")"))
 p_ppfd_midday_mean_tmin_MF<-p_ppfd_midday_mean_tmin_MF+
-  xlab(expression("PAR (umol m"^-2*"s"^-1*")"))
+  xlab(expression("PAR midday mean (umol m"^-2*"s"^-1*")"))+
+  ylab(expression("T"[min]*" (°C)"))
 p_ppfd_midday_mean_tmin_ENF<-p_ppfd_midday_mean_tmin_ENF+
   ylab("")+
-  xlab(expression("PAR (umol m"^-2*"s"^-1*")"))
+  xlab(expression("PAR midday mean (umol m"^-2*"s"^-1*")"))
 #
 
 #B. merge the plots and save:
@@ -387,12 +393,12 @@ save.path<-"./manuscript/figures/"
 p_SW_IN_Tmin<-plot_grid(p_SW_midday_mean_tmin_all,p_SW_midday_mean_tmin_DBF,
                         p_SW_midday_mean_tmin_MF,p_SW_midday_mean_tmin_ENF,
                         nrow = 2,ncol=2,labels = "auto",label_size = 20)
-ggsave(paste0(save.path,"FigureS_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 25,height = 15)
+ggsave(paste0(save.path,"Figure3_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 25,height = 15)
 #
 p_ppfd_Tmin<-plot_grid(p_ppfd_midday_mean_tmin_all,p_ppfd_midday_mean_tmin_DBF,
                         p_ppfd_midday_mean_tmin_MF,p_ppfd_midday_mean_tmin_ENF,
                         nrow = 2,ncol=2,labels = "auto",label_size = 20)
-ggsave(paste0(save.path,"Figure3_boxplot_ppfd_Tmin.png"),p_ppfd_Tmin,width = 25,height = 15)
+ggsave(paste0(save.path,"FigureS_boxplot_ppfd_Tmin.png"),p_ppfd_Tmin,width = 25,height = 15)
 #test albedo
 p_albedo1<-plot_grid(p_SW_midday_mean_alpha_SW_all,p_SW_midday_mean_alpha_SW_DBF,
                     p_SW_midday_mean_alpha_SW_MF,p_SW_midday_mean_alpha_SW_ENF,

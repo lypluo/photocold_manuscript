@@ -114,11 +114,11 @@ Deter_greenup<-function(df,pos_max){
 sep_data_indiffY_sepMismatch<-function(ddf,degf,Clim,PFT,site_name,avai_years){
   # ddf<-ddf
   # degf<-0.05  #degree of freedom for the spline smooth
-  # Clim<-"Dfa"
-  # PFT<-"DBF"
-  # site_name<-"IT-Cor"
-  # avai_years<-c(1996:2014)
-
+  # Clim<-"Dfb"
+  # PFT<-"MF"
+  # site_name<-"US-Syv"
+  # avai_years<-c(2002:2006,2012:2014)
+  
   ##remember add dplyr:: for instance as sometimes two same name functions might conflict with each other
   df<-ddf %>%
   dplyr::filter(sitename==site_name) %>%
@@ -147,6 +147,8 @@ sep_data_indiffY_sepMismatch<-function(ddf,degf,Clim,PFT,site_name,avai_years){
       mutate(gpp_mod_norm_sm = extract_smooth_y(gpp_mod_norm_f,degf))
       df_new<-rbind(df_new,df_t)
       }
+      #coercian gpp_obs to numeric as sometimes long NA makes the rbind wrong to convert to numeric format
+      df_new$gpp_obs_norm_f<-as.numeric(df_new$gpp_obs_norm_f)
     }
     #
     N<-length(df$gpp_mod_FULL)
@@ -162,9 +164,11 @@ sep_data_indiffY_sepMismatch<-function(ddf,degf,Clim,PFT,site_name,avai_years){
     df_final<-c()
     for(i in 1:length(Years_unique)){
     df_subset<-df_new[df_new$Year==Years_unique[i],]
+    #spot t
     #calculate the rollmean 
     df_subset<-df_subset%>%
-        mutate(gpp_mod_roll5=rollapply(df_subset$gpp_mod_norm_f,5,mean,fill=NA,align="center"),
+        dplyr::mutate(
+               gpp_mod_roll5=rollapply(df_subset$gpp_mod_norm_f,5,mean,fill=NA,align="center"),
                gpp_mod_roll7=rollapply(df_subset$gpp_mod_norm_f,7,mean,fill=NA,align="center"),
                gpp_mod_roll10=rollapply(df_subset$gpp_mod_norm_f,10,mean,fill=NA,align="center"),
                gpp_mod_roll15=rollapply(df_subset$gpp_mod_norm_f,15,mean,fill=NA,align="center"),
@@ -725,7 +729,7 @@ print(p_merge)
 
 #US-Syv
 site_name<-"US-Syv"
-df_andPlot_Dfb_MF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","MF",site_name,c(2002:2006,2014))
+df_andPlot_Dfb_MF2<-sep_data_indiffY_sepMismatch(ddf,0.05,"Dfb","MF",site_name,c(2002:2006,2012:2014))
 length(df_andPlot_Dfb_MF2$p_isevent)
 p_diffYears<-df_andPlot_Dfb_MF2$p_isevent
 p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],

@@ -1,0 +1,2 @@
+Aim：to conduct the constant LUE model--> using VPD and temp to simulate GPP
+refer the code write before:

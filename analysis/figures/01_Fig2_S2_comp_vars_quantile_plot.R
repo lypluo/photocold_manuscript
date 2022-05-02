@@ -123,7 +123,7 @@ sep_siteyears_data<-function(df.data,dovars,df.sep,leng_threshold,before,after,n
 #!!important step:leng_threshold=5-->merge the events(consecutive days are over 5 days)
 #do_vars-->the variables that are going to be processed:
 names(df_norm_all)
-do_vars<-c("gpp_obs","fapar_itpl","fapar_spl",paste0(c("ppfd","temp_day","temp_min","temp_max",
+do_vars<-c("gpp_obs","fapar_itpl","fapar_spl",paste0(c("ppfd","PPFD_IN_fullday_mean","temp_day","temp_min","temp_max",
                                                        "vpd_day","prec","patm","SW_IN","ws",paste0("TS_",1:9),paste0("SWC_",1:5)),"_fluxnet2015"),
            "gcc_90","rcc_90")
 #set the before events days from 30 days to 60 days
@@ -143,7 +143,7 @@ df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep20,5,60,0,10,FALSE
 for(i in 1:length(df_len5_nonnorm)){
   #
   df_proc<-df_len5_nonnorm[[i]]
-  df_proc$LUE<-df_proc$gpp_obs/c(df_proc$fapar_itpl*df_proc$ppfd_fluxnet2015)
+  df_proc$LUE<-df_proc$gpp_obs/c(df_proc$fapar_itpl*df_proc$PPFD_IN_fullday_mean_fluxnet2015)
   df_proc$GRVI<-c(df_proc$gcc_90-df_proc$rcc_90)/c(df_proc$gcc_90+df_proc$rcc_90)
   df_proc$alpha_SW<-df_proc$SW_OUT_fullday_mean_fluxnet2015/df_proc$SW_IN_fullday_mean_fluxnet2015
   df_proc$alpha_PPFD<-df_proc$PPFD_OUT_fullday_mean_fluxnet2015/df_proc$PPFD_IN_fullday_mean_fluxnet2015
@@ -154,7 +154,6 @@ for(i in 1:length(df_len5_nonnorm)){
 #----calculate the mean T between "overestimated site" and "non-overestimated site"--
 #only using the data bebtween Jan and June:
 ##the code is in "photocold_manuscript/test/"
-
 
 #-------------------------------------------------------------------------
 #(4)going to compare the "event" and "non-event" site
@@ -354,8 +353,9 @@ p_gpp_obs_len5_b60<-plot_2groups(df_len5_nonnorm,"gpp_obs","(umol m-2 s-1)",do_n
 p_gpp_biaes_len5_b60<-plot_2groups(df_len5_nonnorm,"gpp_res","(umol m-2 s-1)",do_norm = FALSE,FALSE)
 #LUE
 p_LUE_len5_b60<-plot_2groups(df_len5_nonnorm,"LUE","",do_norm = FALSE,FALSE)
-#for ppfd
-p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
+#for ppfd: change the "ppfd_fluxnet2015" to "PPFD_IN_fullday_mean_fluxnet2015"
+# p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
+p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"PPFD_IN_fullday_mean_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
 #fapar_spl and fapar_itpl
 p_fapar_itpl_len5_b60<-plot_2groups(df_len5_nonnorm,"fapar_itpl","",do_norm = FALSE,do_legend = FALSE)
 #some modifying in the plot:
@@ -387,7 +387,7 @@ p_prec_len5_b60<-plot_2groups(df_len5_nonnorm,"prec_fluxnet2015","(mm)",do_norm 
 #vpd_day
 p_vpd_day_len5_b60<-plot_2groups(df_len5_nonnorm,"vpd_day_fluxnet2015","(Pa)",do_norm = FALSE,do_legend = FALSE)
 #SW_IN
-p_SW_IN_len5_b60<-plot_2groups(df_len5_nonnorm,"SW_IN_fluxnet2015","(W m-2)",do_norm = FALSE,FALSE)
+p_SW_IN_len5_b60<-plot_2groups(df_len5_nonnorm,"SW_IN_fullday_mean_fluxnet2015","(W m-2)",do_norm = FALSE,FALSE)
 #TS_1-->first layer soil temperature
 p_TS_1_len5_b60<-plot_2groups(df_len5_nonnorm,"TS_1_fluxnet2015","(degreeC)",do_norm = FALSE,FALSE)
 #SWC_1-->first layer soil mosture
@@ -395,13 +395,13 @@ p_SWC_1_len5_b60<-plot_2groups(df_len5_nonnorm,"SWC_1_fluxnet2015","(%)",do_norm
 
 #some modifying in the plot:
 p_temp_min_len5_b60$plot<-p_temp_min_len5_b60$plot+
-  ylab("Minimum Ta (°C)")+
+  ylab(expression("T"[min]*" (°C)"))+
   ylim(-30,25)
 p_temp_day_len5_b60$plot<-p_temp_day_len5_b60$plot+
-  ylab("Mean Ta (°C)")+
+  ylab(expression("T"[mean]*" (°C)"))+
   ylim(-30,25)
 p_temp_max_len5_b60$plot<-p_temp_max_len5_b60$plot+
-  ylab("Maximum Ta (°C)")+
+  ylab(expression("T"[max]*" (°C)"))+
   ylim(-30,25)
 p_prec_len5_b60$plot<-p_prec_len5_b60$plot+
   ylab("prec (mm)")

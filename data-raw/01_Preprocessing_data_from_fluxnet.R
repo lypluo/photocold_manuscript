@@ -261,6 +261,7 @@ compare_vars<-function(df_YP_daily,df_Beni_daily,var_in_YP,var_in_Beni){
   #plotting
   p_out<-ggplot(data=df_merge,aes(x=tidy_YP,y=tidy_Beni,col=sitename))+
     geom_point()+
+    geom_abline(slope = 1,intercept = 0,lty=2,col="blue")+
     xlab(paste0("tidy_YP: ",var_in_YP))+
     ylab(paste0("tidy_Beni: ",var_in_Beni))
   # print(p_out)
@@ -273,7 +274,10 @@ df_all_sel_daily$GPP_NT_mean<-df_all_sel_daily$GPP_NT_mean*24*3600*12/1000000
 df_all_sel_daily$GPP_DT_mean<-df_all_sel_daily$GPP_DT_mean*24*3600*12/1000000
 #for GPP
 p_gpp<-compare_vars(df_all_sel_daily,df_Beni_sel,"GPP_NT_mean","gpp_obs")
-p_ppfd<-compare_vars(df_all_sel_daily,df_Beni_sel,"PPFD_IN_mean","ppfd_fluxnet2015")
+p_ppfd<-compare_vars(df_all_sel_daily,df_Beni_sel,"PPFD_IN_fullday_mean","ppfd_fluxnet2015")
+#
+p_ppfd<-p_ppfd+
+  geom_abline(slope=0.1,intercept = 0,lty=2,col="blue")
 p_temp<-compare_vars(df_all_sel_daily,df_Beni_sel,"Ta_mean","temp_day_fluxnet2015")
 p_preci<-compare_vars(df_all_sel_daily,df_Beni_sel,"P","prec_fluxnet2015")
 p_patm<-compare_vars(df_all_sel_daily,df_Beni_sel,"PA_mean","patm_fluxnet2015")

@@ -63,7 +63,8 @@ p_plot<-ggplot()+
   geom_line(data=df_sel1,aes(x=x,y=y),size=1.1,col="tomato")+
   geom_line(data=df2,aes(x=x,y=y),col=adjustcolor("forestgreen",0.8),lty=2,size=1.05)+
   geom_line(data=df_sel2,aes(x=x,y=y),size=1.1,col="forestgreen")+
-  xlab(expression("T"[min]*"( ?C )"))+
+  xlab("")+
+  # xlab(expression("T"[min]*"( ?C )"))+
   ylab(expression(italic("f")[stress]))+
   theme_bw()+
   theme(axis.title = element_text(size = 18),
@@ -73,4 +74,4 @@ p_plot<-ggplot()+
 
 #save the plot:
 path<-"./manuscript/figures/"
-ggsave(p_plot,filename = paste0(path,"f_stress.png"))
+ggsave(p_plot,filename = paste0(path,"f_stress.png"),height = 4,width = 5.5)

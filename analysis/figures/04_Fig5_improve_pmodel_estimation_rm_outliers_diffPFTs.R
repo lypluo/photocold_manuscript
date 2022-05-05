@@ -4,9 +4,11 @@
 #######################################################
 #Try to first remove the outliers in the gpp_obs, then start to calibration
 #----------
-library(tidyverse)
+# library(tidyverse)
 library(GenSA)
 library(lubridate)
+# remotes::install_github("computationales/ingestr") #install the package
+library(ingestr)
 #-------------------------
 #(1)load the data and hardening funciton
 #-------------------------
@@ -141,31 +143,31 @@ df_merge$doy<-yday(df_merge$date)
 #main PFTs
 PFTs<-unique(df_merge$classid)
 # optimize for each PFT
-library(tictoc)#-->record the parameterization time
-tic("start to parameterize")
-par_PFTs<-c()
-for(i in 1:length(PFTs)){
-  df_sel<-df_merge %>%
-    dplyr::filter(classid==PFTs[i])
-
-  optim_par <- GenSA::GenSA(
-  par = par,
-  fn = cost,
-  data = df_sel,
-  lower = lower,
-  upper = upper,
-  control = list(max.call=5000))$par
-
-  print(i)
-  par_PFTs[[i]]<-optim_par
-}
-print("finish parameterization")
-toc()
-
-names(par_PFTs)<-PFTs
-print(par_PFTs)
-# save the optimized data
-save(par_PFTs,file = paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_PFTs.rds"))
+# library(tictoc)#-->record the parameterization time
+# tic("start to parameterize")
+# par_PFTs<-c()
+# for(i in 1:length(PFTs)){
+#   df_sel<-df_merge %>%
+#     dplyr::filter(classid==PFTs[i])
+# 
+#   optim_par <- GenSA::GenSA(
+#   par = par,
+#   fn = cost,
+#   data = df_sel,
+#   lower = lower,
+#   upper = upper,
+#   control = list(max.call=5000))$par
+# 
+#   print(i)
+#   par_PFTs[[i]]<-optim_par
+# }
+# print("finish parameterization")
+# toc()
+# 
+# names(par_PFTs)<-PFTs
+# print(par_PFTs)
+# # save the optimized data
+# save(par_PFTs,file = paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_PFTs.rds"))
 
 #--------------------------------------------------------------
 #(4) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
@@ -212,13 +214,19 @@ df_merge_new<-left_join(df_final,df_old,by = c("sitename", "date", "year")) %>%
          gpp=NULL,
          gpp_obs=NULL,
          gpp_mod=NULL)
+#
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_merge_new<-df_merge_new %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
+
 ###########test for ts of temp,tmin and tmax############
 #Ta
 df_merge_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid,doy) %>%
   # group_by(sitename,doy) %>%
-  summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
+  dplyr::summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
           mean_Ta=mean(temp,na.rm=T),
           mean_Tmin=mean(tmin,na.rm=T),
           mean_Tmax=mean(tmax,na.rm=T),
@@ -234,7 +242,7 @@ df_merge_new %>%
 df_merge_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid,doy) %>%
-  summarise(VPD=mean(vpd,na.rm=T))%>%
+  dplyr::summarise(VPD=mean(vpd,na.rm=T))%>%
   ggplot(aes(doy,VPD))+
   geom_line()+
   facet_grid(~classid)
@@ -242,7 +250,7 @@ df_merge_new %>%
 df_merge_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid,doy) %>%
-  summarise(mean_prec=mean(prec,na.rm=T))%>%
+  dplyr::summarise(mean_prec=mean(prec,na.rm=T))%>%
   ggplot(aes(doy,mean_prec))+
   geom_line()+
   facet_grid(~classid)
@@ -250,7 +258,7 @@ df_merge_new %>%
 df_merge_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid,doy) %>%
-  summarise(mean_ppfd=mean(ppfd,na.rm=T))%>%
+  dplyr::summarise(mean_ppfd=mean(ppfd,na.rm=T))%>%
   ggplot(aes(doy,mean_ppfd))+
   geom_line()+
   facet_grid(~classid)
@@ -258,7 +266,7 @@ df_merge_new %>%
 df_merge_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid,doy) %>%
-  summarise(mean_fapar=mean(fapar_itpl,na.rm=T))%>%
+  dplyr::summarise(mean_fapar=mean(fapar_itpl,na.rm=T))%>%
   ggplot(aes(doy,mean_fapar))+
   geom_line()+
   facet_grid(~classid)
@@ -266,7 +274,7 @@ df_merge_new %>%
 df_merge_new %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid,doy) %>%
-  summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
+  dplyr::summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
             gpp_mod_old=mean(gpp_mod_FULL_ori,na.rm=T),
             gpp_mod_new=mean(gpp_mod_recent_ori,na.rm=T))%>%
   pivot_longer(c(gpp_obs,gpp_mod_old,gpp_mod_new),
@@ -276,16 +284,18 @@ df_merge_new %>%
   facet_grid(~classid)
 
 ### make evaluation plots
-
 #(1) For General plots
-devtools::load_all("D:/Github/rbeni/")
-library(rbeni) #-->make the evaluation plot
+# devtools::load_all("D:/Github/rbeni/")
+# library(rbeni) #-->make the evaluation plot
+library(rbeni)
 library(cowplot)
 library(grid)
 
 #--------------------------
-#modelled and observed gpp:scatter plots
+#modelled and observed gpp:scatter plots-->errors occur, need to find out the reasons later (2022-May,04)
 #-------------------------
+#source the function:analyse_modobs2
+# source(file = "./R/functions_from_beni/analyse_modobs2.R")
 plot_modobs_general<-c()
 df_modobs<-c()
 for(i in 1:length(PFTs)){
@@ -303,80 +313,80 @@ for(i in 1:length(PFTs)){
   df_modobs<-rbind(df_modobs,df_modobs_each)
 
   #some setting-->only compare when both gpp_obs and gpp_mod_old_ori are available:
-  df_modobs_each<-df_modobs_each[!is.na(df_modobs_each$gpp_mod_old_ori) & !is.na(df_modobs_each$gpp_obs),]
-  #scatter plots to compare the model and observation gpp
-  gpp_modobs_comp1<-df_modobs_each %>%
-    analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp2<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
-  gpp_modobs_comp3<-df_modobs_each %>%
-    analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
-  # add the site-name:
-  gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
-    annotate(geom="text",x=15,y=0,label=PFTs[i])
+  # df_modobs_each<-df_modobs_each[!is.nan(df_modobs_each$gpp_mod_old_ori) & !is.nan(df_modobs_each$gpp_obs),]
+  # #scatter plots to compare the model and observation gpp
+  # gpp_modobs_comp1<-df_modobs_each %>%
+  #   analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
+  # # gpp_modobs_comp2<-df_modobs_each %>%
+  # #   analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
+  # gpp_modobs_comp3<-df_modobs_each %>%
+  #   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
+  # # add the site-name:
+  # gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
+  #   annotate(geom="text",x=15,y=0,label=PFTs[i])
   # gpp_modobs_comp2$gg<-gpp_modobs_comp2$gg+
   #   annotate(geom="text",x=15,y=0,label=PFTs[i])
-  gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
-    annotate(geom="text",x=15,y=0,label=PFTs[i])
-
-  #merge two plots
-  if(PFTs[i]=="ENF"){
-    p1<-gpp_modobs_comp1$gg+
-      ylab(expression("GPP"[EC]*" (g C m"^-2*" d"^-1*")"))+
-      xlab(expression("GPP"[Orig.P-model]*" (g C m"^-2*" d"^-1*")"))+
-      annotate(geom="text",x=0,y=20,label="e")
-    
-    p3<-gpp_modobs_comp3$gg+
-      ylab("")+
-      xlab(expression("GPP"[Cali.P-model]*" (g C m"^-2*" d"^-1*")"))+
-      annotate(geom="text",x=0,y=20,label="f")
-  }
-  if(PFTs[i]=="DBF"){
-    p1<-gpp_modobs_comp1$gg+
-      ylab(expression("GPP"[EC]*" (g C m"^-2*" d"^-1*")"))+
-      xlab("")+
-      annotate(geom="text",x=0,y=20,label="a")
-    
-    p3<-gpp_modobs_comp3$gg+
-      ylab("")+
-      xlab("")+
-      annotate(geom="text",x=0,y=20,label="b")
-  }
-  if(PFTs[i]=="MF"){
-    p1<-gpp_modobs_comp1$gg+
-      ylab(expression("GPP"[EC]*" (g C m"^-2*" d"^-1*")"))+
-      xlab("")+
-      annotate(geom="text",x=0,y=20,label="c")
-    
-    p3<-gpp_modobs_comp3$gg+
-      ylab("")+
-      xlab("")+
-      annotate(geom="text",x=0,y=20,label="d")
-  }
-  
-  evaulation_merge_plot<-plot_grid(p1,p3,
-                                   widths=15,heights=4,
-                                   ncol =2,nrow = 1,label_size = 12,align = "hv")
-  # plot(evaulation_merge_plot)
-
-  #put all the plots together:
-  plot_modobs_general[[i]]<-evaulation_merge_plot
+  # gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
+  #   annotate(geom="text",x=15,y=0,label=PFTs[i])
+  # 
+  # #merge two plots
+  # if(PFTs[i]=="ENF"){
+  #   p1<-gpp_modobs_comp1$gg+
+  #     ylab(expression("GPP"[EC]*" (g C m"^-2*" d"^-1*")"))+
+  #     xlab(expression("GPP"[Orig.P-model]*" (g C m"^-2*" d"^-1*")"))+
+  #     annotate(geom="text",x=0,y=20,label="e")
+  # 
+  #   p3<-gpp_modobs_comp3$gg+
+  #     ylab("")+
+  #     xlab(expression("GPP"[Cali.P-model]*" (g C m"^-2*" d"^-1*")"))+
+  #     annotate(geom="text",x=0,y=20,label="f")
+  # }
+  # if(PFTs[i]=="DBF"){
+  #   p1<-gpp_modobs_comp1$gg+
+  #     ylab(expression("GPP"[EC]*" (g C m"^-2*" d"^-1*")"))+
+  #     xlab("")+
+  #     annotate(geom="text",x=0,y=20,label="a")
+  # 
+  #   p3<-gpp_modobs_comp3$gg+
+  #     ylab("")+
+  #     xlab("")+
+  #     annotate(geom="text",x=0,y=20,label="b")
+  # }
+  # if(PFTs[i]=="MF"){
+  #   p1<-gpp_modobs_comp1$gg+
+  #     ylab(expression("GPP"[EC]*" (g C m"^-2*" d"^-1*")"))+
+  #     xlab("")+
+  #     annotate(geom="text",x=0,y=20,label="c")
+  # 
+  #   p3<-gpp_modobs_comp3$gg+
+  #     ylab("")+
+  #     xlab("")+
+  #     annotate(geom="text",x=0,y=20,label="d")
+  # }
+  # 
+  # evaulation_merge_plot<-plot_grid(p1,p3,
+  #                                  widths=15,heights=4,
+  #                                  ncol =2,nrow = 1,label_size = 12,align = "hv")
+  # # plot(evaulation_merge_plot)
+  # 
+  # #put all the plots together:
+  # plot_modobs_general[[i]]<-evaulation_merge_plot
 }
-names(plot_modobs_general)<-PFTs
+# names(plot_modobs_general)<-PFTs
 
 #print the plot
-p_scatterplot_all<-plot_grid(plot_modobs_general$DBF,
-                             plot_modobs_general$MF,
-                             plot_modobs_general$ENF,nrow = 3)
+# p_scatterplot_all<-plot_grid(plot_modobs_general$DBF,
+#                              plot_modobs_general$MF,
+#                              plot_modobs_general$ENF,nrow = 3)
 #
-# tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
+# tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf,
 #                       hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
-#   
+#
 #   gb <- ggplot_build(p)
 #   lay <- gb$layout$layout
 #   tags <- cbind(lay, label = paste0(open, tag_pool[lay$PANEL], close), x = x, y = y)
-#   p + geom_text(data = tags, aes_string(x = "x", y = "y", label = "label"), ..., hjust = hjust, 
-#                 vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE) 
+#   p + geom_text(data = tags, aes_string(x = "x", y = "y", label = "label"), ..., hjust = hjust,
+#                 vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE)
 # }
 # library(egg)
 # comp.labels<-data.frame(
@@ -388,8 +398,8 @@ p_scatterplot_all<-plot_grid(plot_modobs_general$DBF,
 #                            tag_pool = comp.labels$label,size=5)
 # print(p_scatterplot_all)
 #save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_scatterplot.png"),p_scatterplot_all,width = 10,height = 15)
+# save.path<-"./manuscript/figures/"
+# ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_scatterplot.png"),p_scatterplot_all,width = 10,height = 15)
 
 #(2) For Seasonality
 #a. Seasonal course for different PFTs:
@@ -427,14 +437,14 @@ sites_num.info<-data.frame(
 season_plot<-df_modobs %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(classid, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
   pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
-  scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
+  scale_color_manual("GPP sources",values = c("mod_old_ori" = "red",
                                               "mod_recent_optim" = "green4", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","EC based")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
@@ -477,7 +487,7 @@ df_modobs %>%
   filter(classid=="DBF") %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(sitename, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
@@ -496,7 +506,7 @@ df_modobs %>%
   filter(classid=="MF") %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(sitename, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
@@ -515,7 +525,7 @@ df_modobs %>%
   filter(classid=="ENF") %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(sitename, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%

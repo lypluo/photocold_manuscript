@@ -59,7 +59,7 @@ df_merge_new<-left_join(df_merge,df_old,by=c("sitename", "date", "year"))
 #-----------
 df_sum_yearly_1<-df_merge_new %>%
   group_by(sitename,year) %>%
-  summarise(temp=mean(temp),
+  dplyr::summarise(temp=mean(temp),
             prec=sum(prec),
             vpd=mean(vpd),
             ppdf=mean(ppfd),
@@ -71,7 +71,7 @@ df_sum_yearly_1<-df_merge_new %>%
             )
 df_sum_yearly_2<-df_merge_new %>%
   group_by(sitename,year) %>%
-  summarise(lon=unique(lon),
+  dplyr::summarise(lon=unique(lon),
             lat=unique(lat),
             classid=unique(classid),
             koeppen_code=unique(koeppen_code))
@@ -85,7 +85,7 @@ df_sum_1<-df_sum_yearly %>%
   summarise_at(vars(temp:fapar_spl),mean,na.rm=T)
 df_sum_2<-df_sum_yearly %>%
   group_by(sitename) %>%
-  summarise(lon=unique(lon),
+  dplyr::summarise(lon=unique(lon),
             lat=unique(lat),
             classid=unique(classid),
             koeppen_code=unique(koeppen_code))
@@ -179,6 +179,7 @@ para_sites<-ggplot(data=data_sel_final,aes(x=parameter,y=parameter_value,fill=PF
   facet_wrap(~parameter,scales = "free",nrow = 3)+
   xlab("Parameters")+
   ylab("")+
+  theme_bw()+
   theme(legend.position = c(0.75,0.18),
         legend.background = element_blank(),
         legend.title = element_text(size=24),

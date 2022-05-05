@@ -60,7 +60,7 @@ df_YP_daily_temp<-df_YP_daily[,-pos_del]
 #get the merged datasets-->merge both df_avai and df_YP_daily_temp
 library(reshape2)
 df_merge_daily<-merge(df_avai,df_YP_daily_temp,by = c("sitename","date"),all.x = T)
-visdat::vis_miss(df_merge_daily,warn_large_data = FALSE)
+# visdat::vis_miss(df_merge_daily[1:31,],warn_large_data = FALSE)
 #--------------------------------------------
 #d. load the updated drivers data from Koen:
 load.path<-"./data-raw/raw_data/Data_prep_by_Koen/"
@@ -79,7 +79,7 @@ for (i in 1:nrow(df_Koen_sel)) {
   df_Koen.forcing<-rbind(df_Koen.forcing,df_temp)
 }
 #
-visdat::vis_miss(df_Koen.forcing,warn_large_data = FALSE)
+# visdat::vis_miss(df_Koen.forcing,warn_large_data = FALSE)
 # visdat::vis_miss(df_merge_daily,warn_large_data = FALSE)
 #comparison between df_Koen and df_merge_daily for tmin and tmax:
 tt1<-df_merge_daily[,c("sitename","date","temp_day_fluxnet2015",
@@ -109,6 +109,21 @@ abline(0,1,col="blue",lty=2)
 #          temp_max_fluxnet2015=tmax,
 #          tmin=NULL,
 #          tmax=NULL)
+#update in May,3rd,2022-->As the PPFD_IN is not avaiable in CN-Qia in my datasets
+#-->hence using the ppfd from Koen's to fill the gap for ppfd in my datasets for the further analysis
+t<-df_merge_daily %>%
+  filter(sitename=="CN-Qia")
+length(t$PPFD_IN_fullday_mean_fluxnet2015[!is.na(t$PPFD_IN_fullday_mean_fluxnet2015)])
+#
+df_merge_daily_CN_Qia<-df_merge_daily %>%
+  filter(sitename=="CN-Qia")%>%
+  left_join(.,df_Koen.forcing[,c("sitename","date","ppfd")])%>%
+  mutate(PPFD_IN_fullday_mean_fluxnet2015=ppfd*1000000)
+#
+df_merge_daily[df_merge_daily$sitename=="CN-Qia",]$PPFD_IN_fullday_mean_fluxnet2015=df_merge_daily_CN_Qia$PPFD_IN_fullday_mean_fluxnet2015
+# df_merge_daily[df_merge_daily$sitename=="CN-Qia",] $PPFD_IN_fullday_mean_fluxnet2015
+
+
 #------------------------------------
 #(2)load the daily PhenoCam data and merge to df_flux_merge
 #------------------------------------

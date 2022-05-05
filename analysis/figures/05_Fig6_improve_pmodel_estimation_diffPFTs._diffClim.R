@@ -224,6 +224,12 @@ df_final_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) 
          gpp=NULL,
          gpp_obs=NULL,
          gpp_mod=NULL)
+
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_final_new<-df_final_new %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
+
 ###########test for ts of temp,tmin and tmax############
 #Ta
 df_final_new %>%
@@ -298,9 +304,9 @@ library(cowplot)
 library(grid)
 
 #--------------------------
-#modelled and observed gpp:scatter plots
+#modelled and observed gpp:scatter plots:scatter plots-->errors occur, need to find out the reasons later (2022-May,04)
 #-------------------------
-plot_modobs_general<-c()
+# plot_modobs_general<-c()
 df_modobs<-c()
 for(i in 1:length(Clim.PFTs)){
 
@@ -317,34 +323,34 @@ for(i in 1:length(Clim.PFTs)){
   df_modobs<-rbind(df_modobs,df_modobs_each)
 
   #scatter plots to compare the model and observation gpp
-  gpp_modobs_comp1<-df_modobs_each %>%
-    analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
-  gpp_modobs_comp2<-df_modobs_each %>%
-    analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
-  gpp_modobs_comp3<-df_modobs_each %>%
-    analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
-  # add the site-name:
-  gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
-    annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  gpp_modobs_comp2$gg<-gpp_modobs_comp2$gg+
-    annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
-    annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-
-  #merge two plots
-  evaulation_merge_plot<-plot_grid(gpp_modobs_comp1$gg,
-                                   gpp_modobs_comp2$gg,gpp_modobs_comp3$gg,
-                                   widths=15,heights=4,
-    labels = "auto",ncol =3,nrow = 1,label_size = 12,align = "hv")
-  # plot(evaulation_merge_plot)
-
-  # put all the plots together:
-  plot_modobs_general[[i]]<-evaulation_merge_plot
+  # gpp_modobs_comp1<-df_modobs_each %>%
+  #   analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
+  # gpp_modobs_comp2<-df_modobs_each %>%
+  #   analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
+  # gpp_modobs_comp3<-df_modobs_each %>%
+  #   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
+  # # add the site-name:
+  # gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
+  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
+  # gpp_modobs_comp2$gg<-gpp_modobs_comp2$gg+
+  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
+  # gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
+  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
+  # 
+  # #merge two plots
+  # evaulation_merge_plot<-plot_grid(gpp_modobs_comp1$gg,
+  #                                  gpp_modobs_comp2$gg,gpp_modobs_comp3$gg,
+  #                                  widths=15,heights=4,
+  #   labels = "auto",ncol =3,nrow = 1,label_size = 12,align = "hv")
+  # # plot(evaulation_merge_plot)
+  # 
+  # # put all the plots together:
+  # plot_modobs_general[[i]]<-evaulation_merge_plot
 }
-names(plot_modobs_general)<-Clim.PFTs
+# names(plot_modobs_general)<-Clim.PFTs
 
 #print the plot
-plot_modobs_general
+# plot_modobs_general
 
 #(2) For Seasonality
 #a. Seasonal course for different Clim_PFTs:
@@ -439,7 +445,7 @@ df_modobs %>%
   filter(Clim_PFTs=="Cfa-DBF") %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(sitename, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
@@ -458,6 +464,6 @@ library(dplyr)
 df_modobs %>%
   filter(Clim_PFTs=="Cfb-DBF")%>%
   group_by(sitename)%>%
-  summarise(n=n(),
+  dplyr::summarise(n=n(),
             mean_gpp_obs=mean(gpp_obs),
             mean_gpp_recent_optim=mean(gpp_mod_recent_optim))

@@ -101,7 +101,7 @@ df_recent$doy<-dayOfYear(df_recent$date)
 #I should use the same value to normlize the gpp and gpp_mod:
 gpp_P95<-df_recent %>%
   group_by(sitename) %>%
-  summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
+  dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
 #
 df_recent<-left_join(df_recent,gpp_P95,by="sitename")
 df_recent<-df_recent %>%
@@ -167,7 +167,10 @@ for (i in 1:length(sel_sites)) {
 df_final_new<-df_final %>%
   mutate(gpp=gpp*gpp_norm_p95,
          gpp_mod=gpp_mod*gpp_norm_p95)
-
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_final_new<-df_final_new %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
 
 #b.make evaluation plots
 #!!first need to merge the modelled gpp from different sources:
@@ -252,7 +255,7 @@ for(i in 1:length(sel_sites)){
 season_plot<-df_modobs %>%
   mutate(doy = lubridate::yday(date)) %>%
   group_by(sitename, doy) %>%
-  summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
@@ -263,7 +266,7 @@ season_plot<-df_modobs %>%
                                               "mod_recent_optim" = "green4", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","EC based")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "Day of year") +
+       x = "DoY (Day)") +
   facet_wrap(~sitename)+
   theme(
     legend.text = element_text(size=20),

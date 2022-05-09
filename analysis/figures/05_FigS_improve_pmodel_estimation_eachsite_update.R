@@ -264,9 +264,9 @@ season_plot<-df_modobs %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
                                               "mod_recent_optim" = "green4", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","EC based")) +
+                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "DoY (Day)") +
+       x = "DoY") +
   facet_wrap(~sitename)+
   theme(
     legend.text = element_text(size=20),

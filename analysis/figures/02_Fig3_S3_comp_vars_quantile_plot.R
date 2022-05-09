@@ -366,7 +366,7 @@ p_gpp_biaes_len5_b60$plot<-p_gpp_biaes_len5_b60$plot+
   xlab("")+
   ylab(expression("GPP bias"*" (g "*"m"^-2*" d"^-1*")"))
 p_ppfd_len5_b60$plot<-p_ppfd_len5_b60$plot+
-  xlab("")+
+  xlab("dday")+
   ylab(expression("PAR"*" (u mol "*"m"^-2*" s"^-1*")"))
 p_fapar_itpl_len5_b60$plot<-p_fapar_itpl_len5_b60$plot+
   xlab("")+
@@ -511,7 +511,7 @@ p_merge_new<-plot_grid(
   labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
 # ggsave(paste0(save.path,"p_new_merged.png"),p_merge_new,width = 20,height = 13)
-#Figure 1:
+#Figure 3:
 p_merge_1<-plot_grid(
   p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"

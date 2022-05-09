@@ -125,8 +125,8 @@ ddf<-ddf %>%
 #   analyse_modobs2("gpp_lue_const", "gpp_obs", type = "hex")
 # 
 # ## LUE ~ temp + VPD model:lm
-# ddf %>% 
-#   analyse_modobs2("gpp_temp_vpd", "gpp_obs", type = "hex")
+ddf %>%
+  analyse_modobs2("gpp_temp_vpd", "gpp_obs", type = "hex")
 # 
 # ## LUE ~ temp + VPD model:glmer
 ddf %>%
@@ -210,7 +210,7 @@ df_meandoy_norm %>%
   filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
   pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd,gpp_lmer), names_to = "model", values_to = "gpp") %>%
   mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd","gpp_lmer")) %>%
-  dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel", "gpp_temp_vpd","gpp_lmer"))) %>% 
+  dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel","gpp_lmer"))) %>%  ##only select one model
   # pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd), names_to = "model", values_to = "gpp") %>% 
   # mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd")) %>% 
   # dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel", "gpp_temp_vpd"))) %>% 
@@ -223,12 +223,12 @@ df_meandoy_norm %>%
   #   ) +
   geom_line(aes(x = doy, y = gpp, color = model)) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "DoY (Day)") +
+       x = "DoY") +
   facet_wrap( ~sitename) +
   # theme_gray() +
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-    "gpp_pmodel" = "red", "gpp_temp_vpd" = "royalblue","gpp_lmer"="darkgoldenrod"),
-    labels = c("EC based","P-model","LUE-lm","LUE-lme"))+
+    "gpp_pmodel" = "red","gpp_lmer"="royalblue"),
+    labels = c("Obervations","P-model","LUE-lme"))+
   # scale_color_manual(
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4")
@@ -304,11 +304,11 @@ df_meandoy_norm_Clim_PFTs %>%
   filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
   pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd,gpp_lmer), names_to = "model", values_to = "gpp") %>%
   mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd","gpp_lmer")) %>%
-  dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel", "gpp_temp_vpd","gpp_lmer"))) %>% 
+  dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel","gpp_lmer"))) %>% ##select only one lm
   ggplot() +
   geom_line(aes(x = doy, y = gpp, color = model)) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "DoY (Day)") +
+       x = "DoY") +
   # facet_wrap( ~Clim_PFTs, ncol = 3, scales = "free_y" ) +
   facet_wrap( ~Clim_PFTs) +
   # theme_gray() +
@@ -317,8 +317,8 @@ df_meandoy_norm_Clim_PFTs %>%
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-     "gpp_pmodel" = "red", "gpp_temp_vpd" = "royalblue","gpp_lmer"="darkgoldenrod"),
-     labels = c("EC based","P-model","LUE-lm","LUE-lme")) +
+     "gpp_pmodel" = "red", "gpp_lmer" = "royalblue"),
+     labels = c("Observations","P-model","LUE-lme")) +
   theme(
     legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),

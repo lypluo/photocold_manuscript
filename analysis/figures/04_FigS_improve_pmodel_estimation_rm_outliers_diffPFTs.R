@@ -446,9 +446,9 @@ season_plot<-df_modobs %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "red",
                                               "mod_recent_optim" = "green4", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","EC based")) +
+                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "Day of year") +
+       x = "DoY") +
   # annotate(geom="text",x=200,y=2,label="")+
   facet_wrap(~classid)+
   theme(
@@ -479,7 +479,7 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
 #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forPFTs.png"),season_plot_new,width = 15,height = 10)
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs.png"),season_plot_new,width = 15,height = 10)
 
 #b. Seasonal course for each sites in different PFTs:
 # For DBF:

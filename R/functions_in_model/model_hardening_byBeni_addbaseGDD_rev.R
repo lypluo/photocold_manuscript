@@ -32,8 +32,8 @@ f_dehardening <- function(temp, par){
 
 #one parameters(e) for scaling
 model_hardening_1par <- function(df,
-                                 par = c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"k" = 5),
-                                 plot = FALSE){
+     par = c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"k" = 5),
+     plot = FALSE){
 
   ## data frame df must contain columns:
   ## 'temp': daily mean temperature

@@ -98,7 +98,7 @@ tmp <- ddf %>%
 
 mod_lmer <- lmer(lue ~ temp_day_fluxnet2015+log(vpd_day_fluxnet2015) + (1|sitename),
                    data=tmp)
-
+summary(mod_lmer)
 #2c).merge the data
 ddf <- ddf %>% 
   # filter(sitename!="CN-Qia")%>%  ## since mod_lmer do not include the CN-Qia site

@@ -123,6 +123,7 @@ vars.names<-c("a1","b1","a2","b2","e","f","k")
 for (i in 1:length(vars.names)) {
   hist(as.numeric(unlist(df_final_new[,vars.names[i]])),xlab = vars.names[i])
 }
+
 ##----------boxplot---------------------
 #a. first for site-level parameters
 data_sel_sites<-df_final_new %>%
@@ -155,9 +156,30 @@ data_sel_PFTs$flag=rep("PFT",nrow(data_sel_PFTs))
 #
 data_sel_PFTs$parameter<-factor(data_sel_PFTs$parameter,
                                 levels = c("a1","b1","a2","b2","k"))
+#c.load the parameters for diff Clim-PFTs:
+load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_Clim_andPFTs_update.rds"))
+#
+paras_Clim_PFTs<-c()
+N<-length(names(par_Clim_PFTs))
+for(i in 1:N){
+  temp<-t(as.data.frame(par_Clim_PFTs[i]))
+  paras_Clim_PFTs<-rbind(paras_Clim_PFTs,temp)
+}
+paras_Clim_PFTs<-as.data.frame(paras_Clim_PFTs)
+names(paras_Clim_PFTs)<-c("a1","b1","a2","b2","e","f","k")
+#
+paras_Clim_PFTs$Clim_PFTs<-names(par_Clim_PFTs)
+#
+data_sel_Clim_PFTs<-paras_Clim_PFTs %>%
+  select(a1:b2,k,Clim_PFTs)%>%
+  pivot_longer(c(a1,b1,a2,b2,k),names_to = "parameter",values_to = "parameter_value")
+data_sel_Clim_PFTs$flag=rep("Clim-PFT",nrow(data_sel_Clim_PFTs))
+
+#########################
 #merge site and PFTs data
 data_sel_final<-bind_rows(data_sel_sites,data_sel_PFTs)
-
+data_sel_final<-bind_rows(data_sel_final,data_sel_Clim_PFTs)
+  
 #box plot with gitter 
 data_sel_final$PFT<-factor(data_sel_final$PFT,levels = c("DBF","MF","ENF"))
 ##parameters distributions of different sites
@@ -172,7 +194,7 @@ data_sel_final$PFT<-factor(data_sel_final$PFT,levels = c("DBF","MF","ENF"))
 #   "k"=scale_y_continuous(limits = c(-10,15))
 # )
 
-para_sites<-ggplot(data=data_sel_final,aes(x=parameter,y=parameter_value,fill=PFT,col=PFT))+
+para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=parameter,y=parameter_value,fill=PFT,col=PFT))+
   geom_point(position = position_jitterdodge())+
   geom_boxplot(alpha=0.6)+
   xlab("")+
@@ -191,7 +213,14 @@ para_sites<-ggplot(data=data_sel_final,aes(x=parameter,y=parameter_value,fill=PF
         strip.text.x = element_text(size = 22)) ##change the facet label size
 #---------------------------------------------
 tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
-                      hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
+                      hjust = "", vjust = "", fontface = 2, family = "", ...) {
+  
+  # p<-para_sites
+  # x=paras_PFTs_new$x
+  # y=paras_PFTs_new$parameter_value
+  # open=""
+  # close=""
+  # tag_pool=paras_PFTs_new$label
   
   gb <- ggplot_build(p)
   lay <- gb$layout$layout
@@ -213,14 +242,79 @@ paras_PFTs_new$col<-c(rep("red",5),rep("forestgreen",5),rep("blue",5))
 #
 paras_PFTs_new$PFT<-factor(paras_PFTs_new$PFT,levels = c("DBF","MF","ENF"))
 paras_PFTs_new$parameter<-factor(paras_PFTs_new$parameter,levels = c("a1","b1","a2","b2","k"))
-paras_boxplot<-tag_facet(para_sites,x=paras_PFTs_new$x,y=paras_PFTs_new$parameter_value+1,
+paras_boxplot<-tag_facet(para_sites,x=paras_PFTs_new$x,y=paras_PFTs_new$parameter_value,
                          #here I add 1 for y axis since there parameters for PFTs did not display properly
                            tag_pool = paras_PFTs_new$label,size=10,col=paras_PFTs_new$col)
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure7_parameters.png"),paras_boxplot,width = 10,height = 10)
+ggsave(paste0(save.path,"Figure6_parameters.png"),paras_boxplot)
 
+#----------------scatter plot------------------
+#environmental drivers vs parameters
+library(ggforce)
+#for example: Tmin vs a1
+#I.site-level
+df_site_level<-df_final_new %>%
+  select(sitename,classid,koeppen_code,Clim.PFTs,a1,tmin,tmax)
+names(df_site_level)<-c("sitename","PFT","Clim.","Clim.PFTs","a1","tmin","tmax")
+#II.Clim-PFT level---
+df_Clim_PFT_level<-df_site_level %>%
+  group_by(Clim.PFTs)%>%
+  summarise(tmin=mean(tmin,na.rm=T),
+            tmax=mean(tmax,na.rm=T))
+#
+par_Clim_PFT_level<-data_sel_final[data_sel_final$flag=="Clim-PFT",]
+par_Clim_PFT_level<-par_Clim_PFT_level %>%
+  filter(parameter=="a1")%>%
+  mutate(sitename=NULL,PFT=NULL,flag=NULL,
+         Clim.PFTs=Clim_PFTs,Clim_PFTs=NULL,parameter=NULL)
+names(par_Clim_PFT_level)<-c("a1","Clim.PFTs")
+#
+df_Clim_PFT_level_new<-left_join(df_Clim_PFT_level,par_Clim_PFT_level)
+df_Clim_PFT_level_new$Clim<-substr(df_Clim_PFT_level_new$Clim.PFTs,1,3)
+df_Clim_PFT_level_new$Clim<-factor(df_Clim_PFT_level_new$Clim,
+                                   levels = c("Cfa","Cfb","Dfb","Dfc"))
+df_Clim_PFT_level_new$PFT<-substr(df_Clim_PFT_level_new$Clim.PFTs,5,7)
+df_Clim_PFT_level_new$PFT<-factor(df_Clim_PFT_level_new$PFT,levels = c("DBF","MF","ENF"))
+#III.PFT level---
+df_PFT_level<-df_site_level %>%
+  group_by(PFT)%>%
+  summarise(tmin=mean(tmin,na.rm=T),
+            tmax=mean(tmax,na.rm=T))
+par_PFT_level<-data_sel_final[data_sel_final$flag=="PFT",] %>%
+  mutate(sitename=NULL,Clim_PFTs=NULL,flag=NULL)%>%
+  filter(parameter=="a1")
+par_PFT_level<-par_PFT_level[,-1]
+names(par_PFT_level)<-c("a1","PFT")
+#
+df_PFT_level_new<-left_join(df_PFT_level,par_PFT_level)
+##----plotting----##
+pars_final<-ggplot()+
+  geom_point(data=df_site_level,aes(x=tmin,y=a1,shape=PFT,size="site"))+
+  ggforce::geom_mark_ellipse(data=df_site_level,
+  aes(x=tmin,y=a1,label=PFT,shape=PFT),label.fill = "grey",
+  con.border = "one",con.cap = 0,con.size = 1.1,
+  con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##site-level
+  geom_point(data=df_Clim_PFT_level_new,
+             aes(x=tmin,y=a1,shape=PFT,col=Clim,size="Clim-PFT"),alpha=0.5)+ ##Clim-PFT level
+  geom_point(data=df_PFT_level_new,
+             aes(x=tmin,y=a1,shape=PFT,size="PFT"),col="blue",alpha=0.5)+##PFT level
+  scale_size_manual("",values = c("site"=3,"Clim-PFT"=6,"PFT"=10))+
+  xlab(expression("T"[min]*" (°C)"))+
+  ylab(paste0("a1"," (°C)"))+
+  theme(
+    legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=24),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+  
+  
 #############################additional code ###########################
 #----
 #check the paraters difference among different groups
@@ -229,7 +323,7 @@ library(ggpubr)
 library(cowplot)
 check_groups<-function(df,par_name){
   # df<-df_final_new
-  # par_name<-"a"
+  # par_name<-"a1"
 
   df_t<-df %>%
     select(sitename,classid,koeppen_code,Clim.PFTs,par_name)
@@ -240,12 +334,12 @@ check_groups<-function(df,par_name){
     geom_density(alpha=.2)+
     xlab(par_name)
   #for different Clim.
-  p_Clim<-ggplot(data=df,aes(x=b,color=koeppen_code,fill=koeppen_code))+
+  p_Clim<-ggplot(data=df_t,aes(x=par,color=koeppen_code,fill=koeppen_code))+
     geom_histogram(aes(y=..density..,),position = "identity",binwidth = 1,alpha=0.5)+
     geom_density(alpha=.2)+
     xlab(par_name)
   #for different Clim.-PFTs
-  p_Clim.PFTs<-ggplot(data=df,aes(x=b,color=Clim.PFTs,fill=Clim.PFTs))+
+  p_Clim.PFTs<-ggplot(data=df_t,aes(x=par,color=Clim.PFTs,fill=Clim.PFTs))+
     geom_histogram(aes(y=..density..,),position = "identity",binwidth = 1,alpha=0.5)+
     xlab(par_name)
   # geom_density(alpha=.2)
@@ -254,10 +348,10 @@ check_groups<-function(df,par_name){
   return(p_merge)
 }
 ##
-check_groups(df_final_new,"a")
-check_groups(df_final_new,"b")
-check_groups(df_final_new,"c")
-check_groups(df_final_new,"d")
+check_groups(df_final_new,"a1")
+check_groups(df_final_new,"b1")
+check_groups(df_final_new,"a2")
+check_groups(df_final_new,"b2")
 check_groups(df_final_new,"e")
 check_groups(df_final_new,"f")
 check_groups(df_final_new,"k")
@@ -267,7 +361,7 @@ check_groups(df_final_new,"k")
 #----
 check_relation<-function(df,par_name){
   # df<-df_final_new
-  # par_name<-"a"
+  # par_name<-"a1"
 
   df_t<-df %>%
     select(sitename:fapar_spl,classid,koeppen_code,Clim.PFTs,par_name)
@@ -311,10 +405,10 @@ check_relation<-function(df,par_name){
 }
 
 #
-check_relation(df_final_new,"a")
-check_relation(df_final_new,"b")
-check_relation(df_final_new,"c")
-check_relation(df_final_new,"d")
+check_relation(df_final_new,"a1")
+check_relation(df_final_new,"b1")
+check_relation(df_final_new,"a2")
+check_relation(df_final_new,"b2")
 check_relation(df_final_new,"e")
 check_relation(df_final_new,"f")
 check_relation(df_final_new,"k")

@@ -230,72 +230,6 @@ rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
 df_final_new<-df_final_new %>%
   filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
 
-###########test for ts of temp,tmin and tmax############
-#Ta
-df_final_new %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs,doy) %>%
-  # group_by(sitename,doy) %>%
-  dplyr::summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
-          mean_Ta=mean(temp,na.rm=T),
-          mean_Tmin=mean(tmin,na.rm=T),
-          mean_Tmax=mean(tmax,na.rm=T),
-          VPD=mean(vpd,na.rm=T),
-          mean_prec=mean(prec,na.rm=T))%>%
-  pivot_longer(c(mean_Ta,mean_Tmin,mean_Tmax),
-               names_to = "Ta_source",values_to = "Ta") %>%
-  ggplot(aes(doy,Ta,color = Ta_source))+
-  geom_line()+
-  facet_grid(~Clim_PFTs)
-  # facet_grid(~sitename)
-#VPD
-df_final_new %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs,doy) %>%
-  dplyr::summarise(VPD=mean(vpd,na.rm=T))%>%
-  ggplot(aes(doy,VPD))+
-  geom_line()+
-  facet_grid(~Clim_PFTs)
-#prec
-df_final_new %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs,doy) %>%
-  dplyr::summarise(mean_prec=mean(prec,na.rm=T))%>%
-  ggplot(aes(doy,mean_prec))+
-  geom_line()+
-  facet_grid(~Clim_PFTs)
-#ppfd
-df_final_new %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs,doy) %>%
-  dplyr::summarise(mean_ppfd=mean(ppfd,na.rm=T))%>%
-  ggplot(aes(doy,mean_ppfd))+
-  geom_line()+
-  facet_grid(~Clim_PFTs)
-#fapar
-df_final_new %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs,doy) %>%
-  dplyr::summarise(mean_fapar=mean(fapar_itpl,na.rm=T))%>%
-  ggplot(aes(doy,mean_fapar))+
-  geom_line()+
-  facet_grid(~Clim_PFTs)
-#gpp
-df_final_new %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs,doy) %>%
-  dplyr::summarise(gpp_obs=mean(gpp_obs_recent,na.rm=T),
-            gpp_mod_old=mean(gpp_mod_FULL_ori,na.rm=T),
-            gpp_mod_new=mean(gpp_mod_recent_ori,na.rm=T))%>%
-  pivot_longer(c(gpp_obs,gpp_mod_old,gpp_mod_new),
-               names_to = "gpp_source",values_to = "gpp")%>%
-  ggplot(aes(doy,gpp,color=gpp_source))+
-  geom_line()+
-  facet_grid(~Clim_PFTs)
-##through gpp--> the biggest mismatch between obs and mod are in Cfb-DBF(underestimation):
-#checking these sites
-unique(df_final_new[df_final_new$Clim_PFTs=="Cfb-DBF",]$sitename)
-
 ### make evaluation plots
 #(1) For General plots
 devtools::load_all("D:/Github/rbeni/")
@@ -303,103 +237,23 @@ library(rbeni) #-->make the evaluation plot
 library(cowplot)
 library(grid)
 
-#--------------------------
-#modelled and observed gpp:scatter plots:scatter plots-->errors occur, need to find out the reasons later (2022-May,04)
 #-------------------------
-# plot_modobs_general<-c()
-df_modobs<-c()
-for(i in 1:length(Clim.PFTs)){
-
-  df_modobs_each<-df_final_new %>%
-    filter(Clim_PFTs==Clim.PFTs[i]) %>%
-    select(sitename,date,Clim_PFTs,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
-    mutate(gpp_obs=gpp_obs_recent,
-           gpp_mod_old_ori=gpp_mod_FULL_ori,
-           gpp_mod_recent_ori=gpp_mod_recent_ori,
-           gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
-    mutate(gpp_obs_recent=NULL,
-           gpp_mod_FULL_ori=NULL)
-  #
-  df_modobs<-rbind(df_modobs,df_modobs_each)
-
-  #scatter plots to compare the model and observation gpp
-  # gpp_modobs_comp1<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp2<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp3<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
-  # # add the site-name:
-  # gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # gpp_modobs_comp2$gg<-gpp_modobs_comp2$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # 
-  # #merge two plots
-  # evaulation_merge_plot<-plot_grid(gpp_modobs_comp1$gg,
-  #                                  gpp_modobs_comp2$gg,gpp_modobs_comp3$gg,
-  #                                  widths=15,heights=4,
-  #   labels = "auto",ncol =3,nrow = 1,label_size = 12,align = "hv")
-  # # plot(evaulation_merge_plot)
-  # 
-  # # put all the plots together:
-  # plot_modobs_general[[i]]<-evaulation_merge_plot
-}
-# names(plot_modobs_general)<-Clim.PFTs
-
-#print the plot
-# plot_modobs_general
-
-#(2) For Seasonality
-#a. Seasonal course for different Clim_PFTs:
-#plotting:
-# 
-# season_plot<-df_modobs %>%
-#   mutate(doy = lubridate::yday(date)) %>%
-#   group_by(Clim_PFTs, doy) %>%
-#   summarise(obs = mean(gpp_obs, na.rm = TRUE),
-#             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
-#             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
-#             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
-#   pivot_longer(c(obs,mod_old_ori,mod_recent_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
-#   ggplot(aes(doy, gpp, color = Source)) +
-#   geom_line() +
-#   scale_color_manual(values = c("mod_old_ori" = "red","mod_recent_ori"="steelblue2",
-#                                 "mod_recent_optim" = "orange", "obs" = "black"),
-#                      labels = c("Old P-model","Recent Ori P-model", "Recent Optim P-model","Obs.")) +
-#   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-#        x = "Day of year") +
-#   annotate(geom="text",x=200,y=2,label="")+
-#   facet_wrap(~Clim_PFTs)
-
-#update using original p-model
-##
-nsites<-df_modobs %>%
-  group_by(Clim_PFTs)%>%
-  dplyr::summarise(nsite=length(unique(sitename)))
-nsites$label<-paste0("N = ",nsites$nsite)
-sites_num.info<-data.frame(
-  doy=rep(20,nrow(nsites)),
-  gpp=rep(14,nrow(nsites)),
-  nsites
-)
-#
-tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
-                      hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
-  
-  gb <- ggplot_build(p)
-  lay <- gb$layout$layout
-  tags <- cbind(lay, label = paste0(open, tag_pool[lay$PANEL], close), x = x, y = y)
-  p + geom_text(data = tags, aes_string(x = "x", y = "y", label = "label"), ..., hjust = hjust, 
-                vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE) 
-}
-
-season_plot<-df_modobs %>%
+# only selecting out the Cfb-DBF and Dfb-DBF
+#--------
+#5a.Cfb-DBF
+#--------
+season_plot<-df_final_new %>%
+  filter(Clim_PFTs=="Cfb-DBF")%>%
+  select(sitename,date,classid,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
+  mutate(gpp_obs=gpp_obs_recent,
+         gpp_mod_old_ori=gpp_mod_FULL_ori,
+         gpp_mod_recent_ori=gpp_mod_recent_ori,
+         gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
+  mutate(gpp_obs_recent=NULL, ##remove the variables
+         gpp_mod_FULL_ori=NULL)%>%
   mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs, doy) %>%
-  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  group_by(sitename,doy)%>%
+  summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
@@ -407,12 +261,12 @@ season_plot<-df_modobs %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                "mod_recent_optim" = "green4", "obs" = "gray4"),
+                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Obseravations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
-  # annotate(geom="text",x=200,y=2,label="")+
-  facet_wrap(~Clim_PFTs)+
+  annotate(geom="text",x=200,y=2,label="")+
+  facet_wrap(~sitename)+
   theme(
     legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
@@ -423,47 +277,56 @@ season_plot<-df_modobs %>%
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white"),
     # legend.background = element_blank(),
-    legend.position = c(0.75,0.1)
+    legend.position = c(0.5,0.3)
   )
-#
 
-#print the plot
-library(egg)
-season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp,
-          tag_pool = sites_num.info$label,size=5)
-# annotate(geom = "text",x=sites_num.info$x,
-  #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs.png"),season_plot_new,width = 15,height = 10)
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/"
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_for_Clim-PFTs_parameter_check_Cfb-DBF.png"),
+       season_plot,width = 15,height = 10)
 
-
-##########################################################################
-#b. Seasonal course for each sites in different PFTs:
-# For DBF:
-df_modobs %>%
-  filter(Clim_PFTs=="Cfa-DBF") %>%
+#--------
+#5b.for Dfb-DBF
+#--------
+season_plot<-df_final_new %>%
+  filter(Clim_PFTs=="Dfb-DBF")%>%
+  select(sitename,date,classid,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
+  mutate(gpp_obs=gpp_obs_recent,
+         gpp_mod_old_ori=gpp_mod_FULL_ori,
+         gpp_mod_recent_ori=gpp_mod_recent_ori,
+         gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
+  mutate(gpp_obs_recent=NULL, ##remove the variables
+         gpp_mod_FULL_ori=NULL)%>%
   mutate(doy = lubridate::yday(date)) %>%
-  group_by(sitename, doy) %>%
-  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
+  group_by(sitename,doy)%>%
+  summarise(obs = mean(gpp_obs, na.rm = TRUE),
             mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
             mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
             mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
-  pivot_longer(c(obs,mod_old_ori,mod_recent_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
+  pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
-  scale_color_manual(values = c("mod_old_ori" = "red","mod_recent_ori"="steelblue2",
-                                "mod_recent_optim" = "orange", "obs" = "black"),
-                     labels = c("Old P-model","Recent Ori P-model", "Recent Optim P-model","Obs.")) +
+  scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
+                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+                     labels = c("Orig. P-model", "Cali. P-model","Obseravations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "Day of year") +
-  facet_wrap(~sitename)
+       x = "DoY") +
+  annotate(geom="text",x=200,y=2,label="")+
+  facet_wrap(~sitename)+
+  theme(
+    legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=24),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white"),
+    # legend.background = element_blank(),
+    legend.position = c(0.8,0.3)
+  )
 
-####
-library(dplyr)
-df_modobs %>%
-  filter(Clim_PFTs=="Cfb-DBF")%>%
-  group_by(sitename)%>%
-  dplyr::summarise(n=n(),
-            mean_gpp_obs=mean(gpp_obs),
-            mean_gpp_recent_optim=mean(gpp_mod_recent_optim))
+#save the plot
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/"
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_for_Clim-PFTs_parameter_check_Dfb-DBF.png"),
+       season_plot,width = 15,height = 10)

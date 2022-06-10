@@ -421,6 +421,15 @@ p_merge<-plot_grid(p_diffYears[[1]],p_diffYears[[2]],p_diffYears[[3]],
           p_diffYears[[13]],p_diffYears[[14]],p_diffYears[[15]],        
           labels = "auto",ncol=3,label_size = 12,align = "hv")
 plot(p_merge)
+#
+temp.save.path="D:/CES/CES_Group_meeting/PhotoCold_Project/20220523_WSL_poster_prep/fig/"
+p_temp<-p_diffYears[[12]]+
+  theme(axis.text = element_text(size=20,angle = 12.5),
+        axis.title = element_text(size=26),
+        legend.text = element_text(size=26),
+        legend.position = c(0.15,0.9))+
+  ylab("Norm GPP")
+ggsave(p_temp,filename = paste0(temp.save.path,"GPP_overestimation.png"),width = 10,height = 8)
 ```
 - Cfa-MF (1 site)
 ```{r echo = FALSE, message = FALSE, warning = FALSE,fig.height=10,fig.width=10}

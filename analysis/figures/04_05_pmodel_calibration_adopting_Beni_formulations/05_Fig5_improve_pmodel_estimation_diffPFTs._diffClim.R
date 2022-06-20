@@ -62,16 +62,14 @@ df_old<-df_old %>%
          year=lubridate::year(date)) %>%
   na.omit(gpp_obs)
 #####
-# source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
-source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))
+source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
 #--------------------------------------------------------------
 #(2) retreive the optimized parameter for the selected sites
 #--------------------------------------------------------------
 # set initial value
-par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
-#
-lower=c(1,-10,5,0)
-upper=c(25,10,25,2)
+par <- c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"f"=1,"k"=5)
+lower=c(-50,0,0,0,0,0,-10)
+upper=c(50,20,200,20,2,2,10)
 
 # run model and compare to true values
 # returns the RMSE
@@ -83,7 +81,7 @@ cost <- function(
   scaling_factor <- data %>%
     # group_by(sitename) %>%
     do({
-      scaling_factor <- f_Ts_rev(
+      scaling_factor <- model_hardening_2par(
         .,
         par
       )
@@ -152,37 +150,37 @@ df_merge.new<-df_merge.new %>%
 
 #---------------------------------
 # optimize for each Clim.-PFT
-library(tictoc)#-->record the parameterization time
-tic("start to parameterize")
-par_Clim_PFTs<-c()
-for(i in 1:length(Clim.PFTs)){
-  df_sel<-df_merge.new %>%
-    dplyr::filter(Clim_PFTs==Clim.PFTs[i])
-
-  optim_par <- GenSA::GenSA(
-  par = par,
-  fn = cost,
-  data = df_sel,
-  lower = lower,
-  upper = upper,
-  control = list(max.call=5000))$par
-
-  print(i)
-  par_Clim_PFTs[[i]]<-optim_par
-}
-print("finish parameterization")
-toc()
+# library(tictoc)#-->record the parameterization time
+# tic("start to parameterize")
+# par_Clim_PFTs<-c()
+# for(i in 1:length(Clim.PFTs)){
+#   df_sel<-df_merge.new %>%
+#     dplyr::filter(Clim_PFTs==Clim.PFTs[i])
 #
-names(par_Clim_PFTs)<-Clim.PFTs
-print(par_Clim_PFTs)
-# save the optimized data
-save(par_Clim_PFTs,file = paste0("data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_Clim_andPFTs.rds"))
+#   optim_par <- GenSA::GenSA(
+#   par = par,
+#   fn = cost,
+#   data = df_sel,
+#   lower = lower,
+#   upper = upper,
+#   control = list(max.call=5000))$par
+#
+#   print(i)
+#   par_Clim_PFTs[[i]]<-optim_par
+# }
+# print("finish parameterization")
+# toc()
+#
+# names(par_Clim_PFTs)<-Clim.PFTs
+# print(par_Clim_PFTs)
+# # save the optimized data
+# save(par_Clim_PFTs,file = paste0(base.path,"data/parameters_MSE_add_baseGDD/test/","optim_par_run5000_beni_Clim_andPFTs_update.rds"))
 
 #--------------------------------------------------------------
 #(5) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
 #load model parameters
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_Clim_andPFTs.rds"))
+load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_Clim_andPFTs_update.rds"))
 #check par_Clim_PFTs
 print(par_Clim_PFTs)
 #a.get the stress factor(calibration factor) for each Clim_PFT
@@ -194,7 +192,7 @@ for (i in 1:length(Clim.PFTs)) {
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- f_Ts_rev(.,par_Clim_PFTs[[i]])
+      scaling_factor <- model_hardening_2par(.,par_Clim_PFTs[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -437,7 +435,7 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
   #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_update.png"),season_plot_new,width = 15,height = 10)
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs.png"),season_plot_new,width = 15,height = 10)
 
 
 ##########################################################################

@@ -4,7 +4,8 @@
 #######################################################
 #Try to first remove the outliers in the gpp_obs, then start to calibration
 #----------
-# library(tidyverse)
+library(tidyverse)
+library(dplyr)
 library(GenSA)
 library(lubridate)
 # remotes::install_github("computationales/ingestr") #install the package
@@ -21,6 +22,8 @@ df_recent <- readRDS(paste0("./data-raw/raw_data/P_model_output/model_data.rds")
   na.omit()
 
 sites<-unique(df_recent$sitename)
+#
+library(ggplot2)
 for (i in 1:length(sites)) {
   df_temp<-df_recent %>%
     filter(sitename==sites[i])
@@ -63,14 +66,17 @@ df_old<-df_old %>%
          year=lubridate::year(date)) %>%
   na.omit(gpp_obs)
 #####
-source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
+# source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
+source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))
 #--------------------------------------------------------------
 #(2) retreive the optimized parameter for the selected sites
 #--------------------------------------------------------------
 # set initial value
-par <- c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"f"=1,"k"=5)
-lower=c(-50,0,0,0,0,0,-10)
-upper=c(50,20,200,20,2,2,10)
+# set initial value
+par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
+#
+lower=c(1,-10,5,0)
+upper=c(25,10,25,2)
 
 # run model and compare to true values
 # returns the RMSE
@@ -82,7 +88,7 @@ cost <- function(
   scaling_factor <- data %>%
     # group_by(sitename) %>%
     do({
-      scaling_factor <- model_hardening_2par(
+      scaling_factor <- f_Ts_rev(
         .,
         par
       )
@@ -131,58 +137,69 @@ left_join(
 ##adding day of the year
 df_merge$doy<-yday(df_merge$date)
 
+#------------------------------------------
+#(4)normalized the GPP-->for each site,
+#normalized the "gpp" and "gpp_mod" through their 90 percentiles
+#------------------------------------------
 #I should use the same value to normlize the gpp and gpp_mod:
-# gpp_P95<-df_merge %>%
-#   group_by(sitename) %>%
-#   dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
-# #
-# df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
-# df_merge.new<-df_merge.new %>%
-#   mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
+gpp_P95<-df_merge %>%
+  group_by(sitename) %>%
+  dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
+#
+df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
+df_merge.new<-df_merge.new %>%
+  mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
 
-#main PFTs
-PFTs<-unique(df_merge$classid)
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_merge_new<-df_merge.new %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
+
+#---------------------------------
 # optimize for each PFT
-# library(tictoc)#-->record the parameterization time
-# tic("start to parameterize")
-# par_PFTs<-c()
-# for(i in 1:length(PFTs)){
-#   df_sel<-df_merge %>%
-#     dplyr::filter(classid==PFTs[i])
-# 
-#   optim_par <- GenSA::GenSA(
-#   par = par,
-#   fn = cost,
-#   data = df_sel,
-#   lower = lower,
-#   upper = upper,
-#   control = list(max.call=5000))$par
-# 
-#   print(i)
-#   par_PFTs[[i]]<-optim_par
-# }
-# print("finish parameterization")
-# toc()
-# 
-# names(par_PFTs)<-PFTs
-# print(par_PFTs)
-# # save the optimized data
-# save(par_PFTs,file = paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_PFTs.rds"))
+#main PFTs
+PFTs<-unique(df_merge.new$classid)
+# optimize for each PFT
+library(tictoc)#-->record the parameterization time
+tic("start to parameterize")
+par_PFTs<-c()
+for(i in 1:length(PFTs)){
+  df_sel<-df_merge.new %>%
+    dplyr::filter(classid==PFTs[i])
+
+  optim_par <- GenSA::GenSA(
+  par = par,
+  fn = cost,
+  data = df_sel,
+  lower = lower,
+  upper = upper,
+  control = list(max.call=5000))$par
+
+  print(i)
+  par_PFTs[[i]]<-optim_par
+}
+print("finish parameterization")
+toc()
+
+names(par_PFTs)<-PFTs
+print(par_PFTs)
+# save the optimized data
+save(par_PFTs,file = paste0("data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
 
 #--------------------------------------------------------------
-#(4) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
+#(5) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
-load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_PFTs.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
 #a.get the stress factor(calibration factor) for each PFT
 df_final<-c()
 for (i in 1:length(PFTs)) {
-  df_sel<-df_merge %>%
+  df_sel<-df_merge.new %>%
     dplyr::filter(classid==PFTs[i])
 
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- model_hardening_2par(.,par_PFTs[[i]])
+      scaling_factor <- f_Ts_rev(.,par_PFTs[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -198,14 +215,14 @@ for (i in 1:length(PFTs)) {
 #-----------------------------
 #need to back-convert the normalized gpp to gpp
 #-----------------------------
-# df_final_new<-df_final %>%
-#   mutate(gpp=gpp*gpp_norm_p95,
-#          gpp_mod=gpp_mod*gpp_norm_p95)
+df_final_new<-df_final %>%
+  mutate(gpp=gpp*gpp_norm_p95,
+         gpp_mod=gpp_mod*gpp_norm_p95)
 
 #b.make evaluation plots
 #!!first need to merge the modelled gpp from different sources:
-df_final$year<-lubridate::year(df_final$date)
-df_merge_new<-left_join(df_final,df_old,by = c("sitename", "date", "year")) %>%
+df_final_new$year<-lubridate::year(df_final_new$date)
+df_merge_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) %>%
   mutate(gpp_obs_recent=gpp,
          gpp_obs_old=gpp_obs,
          gpp_mod_FULL_ori=gpp_mod_FULL,
@@ -215,11 +232,6 @@ df_merge_new<-left_join(df_final,df_old,by = c("sitename", "date", "year")) %>%
          gpp_obs=NULL,
          gpp_mod=NULL)
 #
-# need to remove the sites that do not used in this analysis:
-rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
-df_merge_new<-df_merge_new %>%
-  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
-
 ###########test for ts of temp,tmin and tmax############
 #Ta
 df_merge_new %>%
@@ -479,7 +491,7 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
 #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs.png"),season_plot_new,width = 15,height = 10)
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs_update.png"),season_plot_new,width = 15,height = 10)
 
 #b. Seasonal course for each sites in different PFTs:
 # For DBF:

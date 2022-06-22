@@ -36,14 +36,16 @@ df_old<-df_old %>%
          year=lubridate::year(date)) %>%
   na.omit(gpp_obs)
 #####
-source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
+# source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
+source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))
 #--------------------------------------------------------------
 #(2) retreive the optimized parameter for the selected sites
 #--------------------------------------------------------------
 # set initial value
-par <- c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"f"=1,"k"=5)
-lower=c(-50,0,0,0,0,0,-10)
-upper=c(50,20,200,20,2,2,10)
+par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
+#
+lower=c(1,-10,5,0)
+upper=c(25,10,25,2)
 
 # run model and compare to true values
 # returns the RMSE
@@ -55,7 +57,7 @@ cost <- function(
   scaling_factor <- data %>%
     # group_by(sitename) %>%
     do({
-      scaling_factor <- model_hardening_2par(
+      scaling_factor <-f_Ts_rev(
         .,
         par
       )
@@ -122,14 +124,17 @@ df_recent<-left_join(df_recent,gpp_P95,by="sitename")
 df_recent<-df_recent %>%
   mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
 
-sel_sites<-unique(df_recent$sitename)
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_recent.new<-df_recent %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
 
-# optimize for all sites
+#optimize for all sites
 # library(tictoc)#-->record the parameterization time
 # tic("start to parameterize")
 # par_allsites<-c()
-# # for(i in 1:length(sel_sites)){
-#   df_sel<-df_recent
+# 
+#   df_sel<-df_recent.new
 #     # dplyr::filter(sitename==sel_sites[i])
 # 
 #   optim_par <- GenSA::GenSA(
@@ -142,19 +147,21 @@ sel_sites<-unique(df_recent$sitename)
 # 
 #   # print(i)
 #   par_allsites<-optim_par
-# # }
+#   
 # print("finish parameterization")
 # toc()
 # #
 # # names(par_allsites)<-all_sites
 # print(par_allsites)
 # # save the optimized data
-# save(par_allsites,file = paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_allsite_updated.rds"))
+# save(par_allsites,file = paste0("data/model_parameters/parameters_MAE_newfT/",
+#                                 "optim_par_run5000_allsites.rds"))
 
 #--------------------------------------------------------------
 #(4) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
-load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_allsite_updated.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/",
+            "optim_par_run5000_allsites.rds"))
 #a.get the stress factor(calibration factor) for each Clim-PFT:using the same parameters
 par_Clim_PFTs<-list(a1=par_allsites,a2=par_allsites,a3=par_allsites,a4=par_allsites,
                     a5=par_allsites,a6=par_allsites,a7=par_allsites,a8=par_allsites,
@@ -169,7 +176,7 @@ for (i in 1:length(Clim.PFTs)) {
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- model_hardening_2par(.,par_Clim_PFTs[[i]])
+      scaling_factor <- f_Ts_rev(.,par_Clim_PFTs[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -214,6 +221,7 @@ df_final_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) 
 #--------
 plot_modobs_general<-c()
 df_modobs<-c()
+sel_sites<-unique(df_final_new$sitename)
 for(i in 1:length(sel_sites)){
 
   df_modobs_each<-df_final_new %>%
@@ -308,7 +316,7 @@ season_plot<-df_modobs %>%
 ####
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_1set_parameter.png"),season_plot,width = 20,height = 20)
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_1set_parameter_new.png"),season_plot,width = 20,height = 20)
 
 #--------
 #5b.for Clim-PFTs
@@ -386,6 +394,6 @@ season_plot<-df_modobs %>%
   )
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter.png"),
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter_new.png"),
        season_plot,width = 15,height = 10)
 

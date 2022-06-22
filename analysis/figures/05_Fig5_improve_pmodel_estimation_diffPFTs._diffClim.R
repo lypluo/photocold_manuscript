@@ -150,6 +150,11 @@ df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
 df_merge.new<-df_merge.new %>%
   mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
 
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_merge.new<-df_merge.new %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
+
 #---------------------------------
 # optimize for each Clim.-PFT
 library(tictoc)#-->record the parameterization time
@@ -226,11 +231,6 @@ df_final_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) 
          gpp=NULL,
          gpp_obs=NULL,
          gpp_mod=NULL)
-
-# need to remove the sites that do not used in this analysis:
-rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
-df_final_new<-df_final_new %>%
-  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
 
 ###########test for ts of temp,tmin and tmax############
 #Ta

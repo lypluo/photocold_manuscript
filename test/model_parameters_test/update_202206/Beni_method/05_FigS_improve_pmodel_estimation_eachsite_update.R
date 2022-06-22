@@ -36,16 +36,14 @@ df_old<-df_old %>%
          year=lubridate::year(date)) %>%
   na.omit(gpp_obs)
 #####
-# source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
-source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))
+source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
 #--------------------------------------------------------------
 #(2) retreive the optimized parameter for the selected sites
 #--------------------------------------------------------------
 # set initial value
-par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
-#
-lower=c(1,-10,5,0)
-upper=c(25,10,25,2)
+par <- c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"f"=1,"k"=5)
+lower=c(-50,0,0,0,0,0,-10)
+upper=c(50,20,200,20,2,2,10)
 
 # run model and compare to true values
 # returns the RMSE
@@ -57,7 +55,7 @@ cost <- function(
   scaling_factor <- data %>%
     # group_by(sitename) %>%
     do({
-      scaling_factor <- f_Ts_rev(
+      scaling_factor <- model_hardening_2par(
         .,
         par
       )
@@ -111,36 +109,36 @@ df_recent<-df_recent %>%
 
 sel_sites<-unique(df_recent$sitename)
 # optimize for each site
-library(tictoc)#-->record the parameterization time
-tic("start to parameterize")
-par_mutisites<-c()
-for(i in 1:length(sel_sites)){
-  df_sel<-df_recent %>%
-    dplyr::filter(sitename==sel_sites[i])
-
-  optim_par <- GenSA::GenSA(
-  par = par,
-  fn = cost,
-  data = df_sel,
-  lower = lower,
-  upper = upper,
-  control = list(max.call=5000))$par
-
-  print(i)
-  par_mutisites[[i]]<-optim_par
-}
-print("finish parameterization")
-toc()
+# library(tictoc)#-->record the parameterization time
+# tic("start to parameterize")
+# par_mutisites<-c()
+# for(i in 1:length(sel_sites)){
+#   df_sel<-df_recent %>%
+#     dplyr::filter(sitename==sel_sites[i])
 #
-names(par_mutisites)<-sel_sites
-print(par_mutisites)
+#   optim_par <- GenSA::GenSA(
+#   par = par,
+#   fn = cost,
+#   data = df_sel,
+#   lower = lower,
+#   upper = upper,
+#   control = list(max.call=5000))$par
+#
+#   print(i)
+#   par_mutisites[[i]]<-optim_par
+# }
+# print("finish parameterization")
+# toc()
+# #
+# names(par_mutisites)<-sel_sites
+# print(par_mutisites)
 # save the optimized data
-save(par_mutisites,file = paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+# save(par_mutisites,file = paste0(base.path,"data/parameters_MSE_add_baseGDD/test/","optim_par_run5000_beni_eachsite_updated.rds"))
 
 #--------------------------------------------------------------
 #(4) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_eachsite_updated.rds"))
 #a.get the stress factor(calibration factor) for each site
 df_final<-c()
 for (i in 1:length(sel_sites)) {
@@ -150,7 +148,7 @@ for (i in 1:length(sel_sites)) {
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- f_Ts_rev(.,par_mutisites[[i]])
+      scaling_factor <- model_hardening_2par(.,par_mutisites[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -265,7 +263,7 @@ season_plot<-df_modobs %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
@@ -285,6 +283,6 @@ season_plot<-df_modobs %>%
 
 ####
 #save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_new_cali.png"),season_plot,width = 20,height = 20)
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_Beni.png"),season_plot,width = 20,height = 20)
 

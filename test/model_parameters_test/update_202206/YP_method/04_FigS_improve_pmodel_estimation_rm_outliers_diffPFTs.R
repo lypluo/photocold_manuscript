@@ -415,8 +415,8 @@ season_plot<-df_modobs %>%
   pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
-  scale_color_manual("GPP sources",values = c("mod_old_ori" = "red",
-                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+  scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
+                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
@@ -449,8 +449,9 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
 # annotate(geom = "text",x=sites_num.info$x,
 #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs_update.png"),season_plot_new,width = 15,height = 10)
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs_Mekela2008.png"),season_plot,width = 15,height = 10)
+
 
 #b. Seasonal course for each sites in different PFTs:
 # For DBF:

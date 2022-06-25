@@ -4,7 +4,7 @@
 #######################################################
 #Try to first remove the outliers in the gpp_obs, then start to calibration
 #----------
-# library(tidyverse)
+library(tidyverse)
 library(GenSA)
 library(lubridate)
 # remotes::install_github("computationales/ingestr") #install the package
@@ -131,23 +131,30 @@ left_join(
 ##adding day of the year
 df_merge$doy<-yday(df_merge$date)
 
-#I should use the same value to normlize the gpp and gpp_mod:
-# gpp_P95<-df_merge %>%
-#   group_by(sitename) %>%
-#   dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
-# #
-# df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
-# df_merge.new<-df_merge.new %>%
-#   mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
-
 #main PFTs
 PFTs<-unique(df_merge$classid)
+#main Clim-PFTs
+df_merge$Clim_PFTs<-paste0(df_merge$koeppen_code,"-",df_merge$classid)
+Clim.PFTs<-sort(unique(df_merge$Clim_PFTs))
+#------------------------------------------
+#(4)normalized the GPP-->for each site,
+#normalized the "gpp" and "gpp_mod" through their 90 percentiles
+#------------------------------------------
+#I should use the same value to normlize the gpp and gpp_mod:
+gpp_P95<-df_merge %>%
+  group_by(sitename) %>%
+  dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
+#
+df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
+df_merge.new<-df_merge.new %>%
+  mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
+
 # optimize for each PFT
 # library(tictoc)#-->record the parameterization time
 # tic("start to parameterize")
 # par_PFTs<-c()
 # for(i in 1:length(PFTs)){
-#   df_sel<-df_merge %>%
+#   df_sel<-df_merge.new %>%
 #     dplyr::filter(classid==PFTs[i])
 # 
 #   optim_par <- GenSA::GenSA(
@@ -176,7 +183,7 @@ load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run
 #a.get the stress factor(calibration factor) for each PFT
 df_final<-c()
 for (i in 1:length(PFTs)) {
-  df_sel<-df_merge %>%
+  df_sel<-df_merge.new %>%
     dplyr::filter(classid==PFTs[i])
 
   scaling_factors <- df_sel %>%
@@ -198,14 +205,14 @@ for (i in 1:length(PFTs)) {
 #-----------------------------
 #need to back-convert the normalized gpp to gpp
 #-----------------------------
-# df_final_new<-df_final %>%
-#   mutate(gpp=gpp*gpp_norm_p95,
-#          gpp_mod=gpp_mod*gpp_norm_p95)
+df_final_new<-df_final %>%
+  mutate(gpp=gpp*gpp_norm_p95,
+         gpp_mod=gpp_mod*gpp_norm_p95)
 
 #b.make evaluation plots
 #!!first need to merge the modelled gpp from different sources:
-df_final$year<-lubridate::year(df_final$date)
-df_merge_new<-left_join(df_final,df_old,by = c("sitename", "date", "year")) %>%
+df_final_new$year<-lubridate::year(df_final$date)
+df_merge_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) %>%
   mutate(gpp_obs_recent=gpp,
          gpp_obs_old=gpp_obs,
          gpp_mod_FULL_ori=gpp_mod_FULL,
@@ -539,4 +546,80 @@ df_modobs %>%
        x = "Day of year") +
   facet_wrap(~sitename)
 
+#------------------------------------------
+#Additional plots(2022-06):compare the modelled GPP with optimilized 3 pars(for diff PFTs)
+#with observed GPP-->for different Clim-PFTs
+#------------------------------------------
+#a.get the stress factor(calibration factor) for each Clim-PFT:using the same parameters 
+#for each 
+#
+test<-df_merge_new %>%
+  select(sitename,date,doy,classid,Clim_PFTs,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
+  mutate(gpp_obs=gpp_obs_recent,
+         gpp_mod_old_ori=gpp_mod_FULL_ori,
+         gpp_mod_recent_ori=gpp_mod_recent_ori,
+         gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
+  mutate(gpp_obs_recent=NULL,
+         gpp_mod_FULL_ori=NULL)
+#for Clim-PFTs
+season_plot<-test %>%
+  group_by(Clim_PFTs, doy) %>%
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
+                   mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
+                   mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
+                   mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
+  pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
+  ggplot(aes(doy, gpp, color = Source)) +
+  geom_line() +
+  scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
+                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
+                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+  labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
+       x = "DoY") +
+  # annotate(geom="text",x=200,y=2,label="")+
+  facet_wrap(~Clim_PFTs)+
+  theme(
+    legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=24),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white"),
+    legend.position = "bottom"
+  )
+#save the plot
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/model_eval_1or3_sets_paras/"
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_3set_parameter_Beni.png"),
+       season_plot,width = 15,height = 10)
+
+#for different sites
+test %>%
+  group_by(sitename, doy) %>%
+  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
+                   mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
+                   mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
+                   mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
+  pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
+  ggplot(aes(doy, gpp, color = Source)) +
+  geom_line() +
+  scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
+                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+  labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
+       x = "DoY") +
+  # annotate(geom="text",x=200,y=2,label="")+
+  facet_wrap(~sitename)+
+  theme(
+    legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=24),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white"),
+    legend.position = "bottom"
+  )
 

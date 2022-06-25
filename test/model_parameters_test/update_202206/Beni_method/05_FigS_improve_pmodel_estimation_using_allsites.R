@@ -243,7 +243,6 @@ season_plot<-df_final_new %>%
 save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
 ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forallsites_Beni.png"),season_plot,width = 12,height = 10)
 
-
 #--------
 #5a.plot for site
 #--------
@@ -401,7 +400,7 @@ season_plot<-df_modobs %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Obseravations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
@@ -420,7 +419,7 @@ season_plot<-df_modobs %>%
     legend.position = c(0.75,0.1)
   )
 #save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter.png"),
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/model_eval_1or3_sets_paras/"
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter_Beni.png"),
        season_plot,width = 15,height = 10)
 

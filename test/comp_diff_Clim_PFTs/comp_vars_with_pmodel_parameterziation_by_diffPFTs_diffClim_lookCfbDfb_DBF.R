@@ -2,6 +2,7 @@
 ##Aim: comaparing the variable differences between different Clim-PFTs
 #######################################################
 #update in March,07:Normlize the gpp and use two parametes scaling factor( e and f)
+#update in June:compare the difference in different types in MF
 #----------
 library(dplyr)
 library(tidyverse)
@@ -61,14 +62,22 @@ df_old<-df_old %>%
          year=lubridate::year(date)) %>%
   na.omit(gpp_obs)
 #####
-source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
+# source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
+#update using Mekela et al., 2008
+source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))
+
 #--------------------------------------------------------------
 #(2) retreive the optimized parameter for the selected sites
 #--------------------------------------------------------------
 # set initial value
-par <- c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"f"=1,"k"=5)
-lower=c(-50,0,0,0,0,0,-10)
-upper=c(50,20,200,20,2,2,10)
+# par <- c("a" = 0, "b" = 0.5, "c" = 50, "d" = 0.1, "e" = 1,"f"=1,"k"=5)
+# lower=c(-50,0,0,0,0,0,-10)
+# upper=c(50,20,200,20,2,2,10)
+# set initial value
+par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
+#
+lower=c(1,-10,5,0)
+upper=c(25,10,25,2)
 
 # run model and compare to true values
 # returns the RMSE
@@ -80,7 +89,7 @@ cost <- function(
   scaling_factor <- data %>%
     # group_by(sitename) %>%
     do({
-      scaling_factor <- model_hardening_2par(
+      scaling_factor <- f_Ts_rev(
         .,
         par
       )
@@ -180,7 +189,9 @@ df_merge.new<-df_merge.new %>%
 #here between Cfb-DBF and Dfb-DBF
 #--------------------------------------------------------------
 #load model parameters
-load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_Clim_andPFTs_update.rds"))
+# load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_Clim_andPFTs_update.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_Clim_andPFTs.rds"))
+
 #check par_Clim_PFTs
 print(par_Clim_PFTs)
 #a.get the stress factor(calibration factor) for each Clim_PFT
@@ -192,7 +203,7 @@ for (i in 1:length(Clim.PFTs)) {
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- model_hardening_2par(.,par_Clim_PFTs[[i]])
+      scaling_factor <- f_Ts_rev(.,par_Clim_PFTs[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -247,7 +258,7 @@ comp_vars<-function(df,vars,do_legend){
   # do_legend<-TRUE
   #
   df_plot<-df_final_new %>%
-    filter(Clim_PFTs=="Cfa-DBF"|Clim_PFTs=="Cfb-DBF"|Clim_PFTs=="Dfb-DBF")%>%
+    filter(Clim_PFTs=="Cfa-MF"|Clim_PFTs=="Cfb-MF"|Clim_PFTs=="Dfb-MF")%>%
     select(sitename,date,Clim_PFTs,vars)%>%
     mutate(doy = lubridate::yday(date))
   names(df_plot)<-c("sitename","date","Clim_PFTs","proc_var","doy")
@@ -257,9 +268,9 @@ comp_vars<-function(df,vars,do_legend){
     summarise(proc_var=mean(proc_var,na.rm=T)) %>%
     ggplot(aes(doy,proc_var,color=Clim_PFTs))+
     geom_line(size=1.1)+
-    scale_color_manual("Clim_PFTs",values = c("Cfa-DBF"="grey10","Cfb-DBF" = "steelblue2",
-           "Dfb-DBF" = "orange"),
-          labels = c("Cfa-DBF","Cfb-DBF", "Dfb-DBF")) +
+    scale_color_manual("Clim_PFTs",values = c("Cfa-MF"="grey10","Cfb-MF" = "steelblue2",
+           "Dfb-MF" = "orange"),
+          labels = c("Cfa-MF","Cfb-MF", "Dfb-MF")) +
     labs(y = vars ,
          x = "DoY") +
     theme(
@@ -295,6 +306,6 @@ plot_vpd<-comp_vars(df_final_new,"vpd",FALSE)
 library(ggpubr)
 comp_env_vars<-plot_grid(plot_temp,plot_tmin,plot_ppfd,plot_vpd,nrow = 2)
 save.path<-"./manuscript/test_files/compare_vars_in_diff_Clim_PFTs/"
-ggsave(paste0(save.path,"Check_vars_DBF.png"),
+ggsave(paste0(save.path,"Check_vars_MF.png"),
        comp_env_vars,width = 15,height = 10)
 

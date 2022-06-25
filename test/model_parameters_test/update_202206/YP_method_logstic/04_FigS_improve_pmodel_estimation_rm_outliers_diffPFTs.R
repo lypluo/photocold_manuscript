@@ -162,32 +162,32 @@ df_merge_new<-df_merge.new %>%
 # optimize for each PFT
 #main PFTs
 PFTs<-unique(df_merge.new$classid)
-# optimize for each PFT
-library(tictoc)#-->record the parameterization time
-tic("start to parameterize")
-par_PFTs<-c()
-for(i in 1:length(PFTs)){
-  df_sel<-df_merge.new %>%
-    dplyr::filter(classid==PFTs[i])
-
-  optim_par <- GenSA::GenSA(
-  par = par,
-  fn = cost,
-  data = df_sel,
-  lower = lower,
-  upper = upper,
-  control = list(max.call=5000))$par
-
-  print(i)
-  par_PFTs[[i]]<-optim_par
-}
-print("finish parameterization")
-toc()
-
-names(par_PFTs)<-PFTs
-print(par_PFTs)
-# save the optimized data
-save(par_PFTs,file = paste0("data/model_parameters/parameters_MAE_newfT_logistic/","optim_par_run5000_PFTs.rds"))
+# # optimize for each PFT
+# library(tictoc)#-->record the parameterization time
+# tic("start to parameterize")
+# par_PFTs<-c()
+# for(i in 1:length(PFTs)){
+#   df_sel<-df_merge.new %>%
+#     dplyr::filter(classid==PFTs[i])
+# 
+#   optim_par <- GenSA::GenSA(
+#   par = par,
+#   fn = cost,
+#   data = df_sel,
+#   lower = lower,
+#   upper = upper,
+#   control = list(max.call=5000))$par
+# 
+#   print(i)
+#   par_PFTs[[i]]<-optim_par
+# }
+# print("finish parameterization")
+# toc()
+# 
+# names(par_PFTs)<-PFTs
+# print(par_PFTs)
+# # save the optimized data
+# save(par_PFTs,file = paste0("data/model_parameters/parameters_MAE_newfT_logistic/","optim_par_run5000_PFTs.rds"))
 
 #--------------------------------------------------------------
 #(5) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
@@ -527,7 +527,7 @@ test<-df_merge_new %>%
   mutate(gpp_obs_recent=NULL,
          gpp_mod_FULL_ori=NULL)
 #for Clim-PFTs
-test %>%
+season_plot<-test %>%
   group_by(Clim_PFTs, doy) %>%
   dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
                    mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
@@ -537,7 +537,7 @@ test %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "red",
-                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
@@ -554,6 +554,12 @@ test %>%
     panel.background = element_rect(colour ="grey",fill="white"),
     legend.position = "bottom"
   )
+
+#save the plot
+save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/model_eval_1or3_sets_paras/"
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_3set_parameter_fT_logistic.png"),
+       season_plot,width = 15,height = 10)
+
 #for different sites
 test %>%
   group_by(sitename, doy) %>%
@@ -583,126 +589,3 @@ test %>%
     legend.position = "bottom"
   )
 
-####
-Clim.PFTs #following the order of Clim.PFTs
-par_Clim_PFTs<-list(a1=par_PFTs$DBF,a2=par_PFTs$ENF,a3=par_PFTs$MF,a4=par_PFTs$DBF,
-                    a5=par_PFTs$ENF,a6=par_PFTs$MF,a7=par_PFTs$DBF,a8=par_PFTs$ENF,
-                    a9=par_PFTs$MF,a10=par_PFTs$ENF)
-names(par_Clim_PFTs)<-Clim.PFTs
-
-df_final<-c()
-for (i in 1:length(Clim.PFTs)) {
-  df_sel<-df_merge.new %>%
-    dplyr::filter(Clim_PFTs==Clim.PFTs[i])
-  
-  scaling_factors <- df_sel %>%
-    # group_by(sitename, year) %>%
-    do({
-      scaling_factor <- f_Ts_rev(.,par_Clim_PFTs[[i]])
-      data.frame(
-        sitename = .$sitename,
-        date = .$date,
-        scaling_factor_optim = scaling_factor
-      )
-    })
-  df_sel_new <- left_join(df_sel, scaling_factors)
-  
-  #merge different sites:
-  df_final<-rbind(df_final,df_sel_new)
-}
-
-#-----------------------------
-#need to back-convert the normalized gpp to gpp
-#-----------------------------
-df_final_new<-df_final %>%
-  mutate(gpp=gpp*gpp_norm_p95,
-         gpp_mod=gpp_mod*gpp_norm_p95)
-
-#b.make evaluation plots
-#!!first need to merge the modelled gpp from different sources:
-df_final_new$year<-lubridate::year(df_final_new$date)
-df_merge_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) %>%
-  mutate(gpp_obs_recent=gpp,
-         gpp_obs_old=gpp_obs,
-         gpp_mod_FULL_ori=gpp_mod_FULL,
-         gpp_mod_recent_ori=gpp_mod,
-         gpp_mod_recent_optim=gpp_mod*scaling_factor_optim,
-         gpp=NULL,
-         gpp_obs=NULL,
-         gpp_mod=NULL)
-
-df_modobs<-c()
-for(i in 1:length(Clim.PFTs)){
-  
-  df_modobs_each<-df_merge_new %>%
-    filter(Clim_PFTs==Clim.PFTs[i]) %>%
-    select(sitename,date,Clim_PFTs,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
-    mutate(gpp_obs=gpp_obs_recent,
-           gpp_mod_old_ori=gpp_mod_FULL_ori,
-           gpp_mod_recent_ori=gpp_mod_recent_ori,
-           gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
-    mutate(gpp_obs_recent=NULL,
-           gpp_mod_FULL_ori=NULL)
-  #
-  df_modobs<-rbind(df_modobs,df_modobs_each)
-  
-  #scatter plots to compare the model and observation gpp
-  # gpp_modobs_comp1<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp2<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp3<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
-  # # add the site-name:
-  # gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # gpp_modobs_comp2$gg<-gpp_modobs_comp2$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # 
-  # #merge two plots
-  # evaulation_merge_plot<-plot_grid(gpp_modobs_comp1$gg,
-  #                                  gpp_modobs_comp2$gg,gpp_modobs_comp3$gg,
-  #                                  widths=15,heights=4,
-  #   labels = "auto",ncol =3,nrow = 1,label_size = 12,align = "hv")
-  # # plot(evaulation_merge_plot)
-  # 
-  # # put all the plots together:
-  # plot_modobs_general[[i]]<-evaulation_merge_plot
-}
-
-#(2) For Seasonality
-season_plot<-df_modobs %>%
-  mutate(doy = lubridate::yday(date)) %>%
-  group_by(Clim_PFTs, doy) %>%
-  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
-                   mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
-                   mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
-                   mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
-  pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
-  ggplot(aes(doy, gpp, color = Source)) +
-  geom_line() +
-  scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Obseravations")) +
-  labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
-       x = "DoY") +
-  # annotate(geom="text",x=200,y=2,label="")+
-  facet_wrap(~Clim_PFTs)+
-  theme(
-    legend.text = element_text(size=20),
-    legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=24),
-    axis.text = element_text(size = 20),
-    text = element_text(size=24),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.background = element_rect(colour ="grey",fill="white"),
-    # legend.background = element_blank(),
-    legend.position = c(0.75,0.1)
-  )
-#save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_3set_parameter_new.png"),
-       season_plot,width = 15,height = 10)

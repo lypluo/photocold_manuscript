@@ -37,16 +37,15 @@ df_old<-df_old %>%
   na.omit(gpp_obs)
 #####
 # source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
-source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))
+source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_logstic_rev.R"))
 #--------------------------------------------------------------
 #(2) retreive the optimized parameter for the selected sites
 #--------------------------------------------------------------
 # set initial value
-par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
+par=c("tau"=5,"X0"=-10,"b"=0.2,"Ts"=5,"k"=1)
 #
-lower=c(1,-10,5,0)
-upper=c(25,10,25,2)
-
+lower=c(1,-10,0,0,0)
+upper=c(25,10,1,25,2)
 # run model and compare to true values
 # returns the RMSE
 cost <- function(
@@ -57,7 +56,7 @@ cost <- function(
   scaling_factor <- data %>%
     # group_by(sitename) %>%
     do({
-      scaling_factor <-f_Ts_rev(
+      scaling_factor <-f_Ts_logstic_rev(
         .,
         par
       )
@@ -147,21 +146,20 @@ df_recent.new<-df_recent %>%
 # 
 #   # print(i)
 #   par_allsites<-optim_par
-#   
+# 
 # print("finish parameterization")
 # toc()
 # #
 # # names(par_allsites)<-all_sites
 # print(par_allsites)
 # # save the optimized data
-# save(par_allsites,file = paste0("data/model_parameters/parameters_MAE_newfT/",
+# save(par_allsites,file = paste0("data/model_parameters/parameters_MAE_newfT_logistic/",
 #                                 "optim_par_run5000_allsites.rds"))
 
 #--------------------------------------------------------------
 #(4) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/",
-            "optim_par_run5000_allsites.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT_logistic/","optim_par_run5000_allsites.rds"))
 #a.get the stress factor(calibration factor) for each Clim-PFT:using the same parameters
 par_Clim_PFTs<-list(a1=par_allsites,a2=par_allsites,a3=par_allsites,a4=par_allsites,
                     a5=par_allsites,a6=par_allsites,a7=par_allsites,a8=par_allsites,
@@ -176,7 +174,7 @@ for (i in 1:length(Clim.PFTs)) {
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- f_Ts_rev(.,par_Clim_PFTs[[i]])
+      scaling_factor <- f_Ts_logstic_rev(.,par_Clim_PFTs[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -247,9 +245,9 @@ season_plot<-df_final_new %>%
 
 ####
 #save the plot
-save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forallsites_Mekela20008.png"),season_plot,width = 12,height = 10)
-
+# save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
+# ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forallsites_Mekela20008_logistic.png"),season_plot,width = 12,height = 10)
+# 
 #--------
 #5a.plot for site
 #--------
@@ -427,9 +425,8 @@ season_plot<-df_modobs %>%
     legend.position = c(0.75,0.1)
   )
 #save the plot
-#save the plot
 save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/model_eval_1or3_sets_paras/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter_fT.png"),
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter_fT_logistic.png"),
        season_plot,width = 15,height = 10)
 
 

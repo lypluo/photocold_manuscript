@@ -436,8 +436,9 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
 # annotate(geom = "text",x=sites_num.info$x,
   #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
-save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_Mekela2008.png"),season_plot,width = 20,height = 20)
+save.path<-"./manuscript/figures/"
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_fT.png"),
+       season_plot_new,width = 15,height = 10)
 
 
 ##########################################################################

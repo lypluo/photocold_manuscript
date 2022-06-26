@@ -12,7 +12,7 @@ library(ggpubr)
 #---------------------------
 #(1)load the calibrated parameters for each site
 #---------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_eachsite_updated.rds"))
 #merge the parameters:
 merge_pars<-c()
 sites<-names(par_mutisites)
@@ -23,7 +23,7 @@ for(i in 1:length(par_mutisites)){
 pars_final<-as.data.frame(t(merge_pars))
 names(pars_final)<-sites
 #change the parameters name:
-rownames(pars_final)<-c("tau","X0","Smax","k")
+rownames(pars_final)<-c("a1","b1","a2","b2","e","f","k")
 
 #----------------------------
 #(2)load original data(meteos, gpp..)
@@ -108,7 +108,6 @@ load(paste0(load.path,"df_events_length.RDA"))
 used_sites<-unique(df_events_all$sitename)
 
 #-----select the data for thoses used sites----
-#delete the sites do not used:
 df_final<-df_sum %>%
   filter(sitename %in% used_sites)
 
@@ -123,7 +122,7 @@ df_final_new<-left_join(df_final,pars_final,by="sitename")
 #---
 #check the variables distribution and boxplots
 #---
-vars.names<-c("tau","X0","Smax","k")
+vars.names<-c("a1","b1","a2","b2","e","f","k")
 for (i in 1:length(vars.names)) {
   hist(as.numeric(unlist(df_final_new[,vars.names[i]])),xlab = vars.names[i])
 }
@@ -131,37 +130,37 @@ for (i in 1:length(vars.names)) {
 ##----------boxplot---------------------
 #a. first for site-level parameters
 data_sel_sites<-df_final_new %>%
-  select(sitename,classid,tau:k)%>%
-  pivot_longer(c(tau:k),names_to = "parameter",values_to = "parameter_value")
-#only focus on the tau,X0,Smax
+  select(sitename,classid,a1:k)%>%
+  pivot_longer(c(a1:k),names_to = "parameter",values_to = "parameter_value")
+#only focus on the a,b,c,d,k
 data_sel_sites<-data_sel_sites %>%
-  filter(parameter %in% c("tau","X0","Smax"))%>%
+  filter(parameter %in% c("a1","b1","a2","b2","k"))%>%
   mutate(PFT=classid,
          classid=NULL)
 data_sel_sites$flag=rep("site",nrow(data_sel_sites))
 #
 data_sel_sites$parameter<-factor(data_sel_sites$parameter,
-                                 levels = c("tau","X0","Smax"))
+                                 levels = c("a1","b1","a2","b2","k"))
 #-----------
 #b.also load the parameters for diff PFTs:
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_PFTs.rds"))
 paras_PFTs<-data.frame(DBF=par_PFTs$DBF,
                        MF=par_PFTs$MF,
                        EN=par_PFTs$ENF)
 paras_PFTs<-as.data.frame(t(paras_PFTs))
 paras_PFTs$PFT<-c("DBF","MF","ENF")
 #also change the parameters names:
-names(paras_PFTs)<-c("tau","X0","Smax","k","PFT")
+names(paras_PFTs)<-c("a1","b1","a2","b2","e","f","k","PFT")
 #
 data_sel_PFTs<-paras_PFTs %>%
-  select(tau:Smax,PFT)%>%
-  pivot_longer(c(tau,X0,Smax),names_to = "parameter",values_to = "parameter_value")
+  select(a1:b2,k,PFT)%>%
+  pivot_longer(c(a1,b1,a2,b2,k),names_to = "parameter",values_to = "parameter_value")
 data_sel_PFTs$flag=rep("PFT",nrow(data_sel_PFTs))
 #
 data_sel_PFTs$parameter<-factor(data_sel_PFTs$parameter,
-                                levels = c("tau","X0","Smax"))
+                                levels = c("a1","b1","a2","b2","k"))
 #c.load the parameters for diff Clim-PFTs:
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_Clim_andPFTs.rds"))
+load(paste0("./data/model_parameters/parameters_MSE_add_baseGDD/","optim_par_run5000_beni_Clim_andPFTs_update.rds"))
 #
 paras_Clim_PFTs<-c()
 N<-length(names(par_Clim_PFTs))
@@ -170,13 +169,13 @@ for(i in 1:N){
   paras_Clim_PFTs<-rbind(paras_Clim_PFTs,temp)
 }
 paras_Clim_PFTs<-as.data.frame(paras_Clim_PFTs)
-names(paras_Clim_PFTs)<-c("tau","X0","Smax","k")
+names(paras_Clim_PFTs)<-c("a1","b1","a2","b2","e","f","k")
 #
 paras_Clim_PFTs$Clim_PFTs<-names(par_Clim_PFTs)
 #
 data_sel_Clim_PFTs<-paras_Clim_PFTs %>%
-  select(tau:Smax,Clim_PFTs)%>%
-  pivot_longer(c(tau,X0,Smax),names_to = "parameter",values_to = "parameter_value")
+  select(a1:b2,k,Clim_PFTs)%>%
+  pivot_longer(c(a1,b1,a2,b2,k),names_to = "parameter",values_to = "parameter_value")
 data_sel_Clim_PFTs$flag=rep("Clim-PFT",nrow(data_sel_Clim_PFTs))
 
 #########################
@@ -202,7 +201,7 @@ para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=param
   geom_point(position = position_jitterdodge())+
   geom_boxplot(alpha=0.6)+
   xlab("")+
-  facet_wrap(~parameter,scales = "free",ncol = 3)+
+  facet_wrap(~parameter,scales = "free",nrow = 3)+
   xlab("Parameters")+
   ylab("")+
   theme_bw()+
@@ -216,7 +215,6 @@ para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=param
         axis.ticks.x = element_blank(),
         strip.text.x = element_text(size = 22)) ##change the facet label size
 #---------------------------------------------
-#!!!working to here:
 tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
                       hjust = "", vjust = "", fontface = 2, family = "", ...) {
   

@@ -247,8 +247,8 @@ season_plot<-df_final_new %>%
 
 ####
 #save the plot
-save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forallsites_Mekela20008.png"),season_plot,width = 12,height = 10)
+save.path<-"./manuscript/figures/"
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forallsites_fT.png"),season_plot,width = 12,height = 10)
 
 #--------
 #5a.plot for site
@@ -426,10 +426,33 @@ season_plot<-df_modobs %>%
     # legend.background = element_blank(),
     legend.position = c(0.75,0.1)
   )
+##adding the site numbers in each category:
+tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
+                      hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
+  
+  gb <- ggplot_build(p)
+  lay <- gb$layout$layout
+  tags <- cbind(lay, label = paste0(open, tag_pool[lay$PANEL], close), x = x, y = y)
+  p + geom_text(data = tags, aes_string(x = "x", y = "y", label = "label"), ..., hjust = hjust, 
+                vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE) 
+}
+
+nsites<-df_modobs %>%
+  group_by(Clim_PFTs)%>%
+  dplyr::summarise(nsite=length(unique(sitename)))
+nsites$label<-paste0("N = ",nsites$nsite)
+sites_num.info<-data.frame(
+  doy=rep(20,nrow(nsites)),
+  gpp=rep(14,nrow(nsites)),
+  nsites
+)
+
+season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp,
+                           tag_pool = sites_num.info$label,size=5)
+
 #save the plot
-#save the plot
-save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/model_eval_1or3_sets_paras/"
+save.path<-"./manuscript/figures/"
 ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter_fT.png"),
-       season_plot,width = 15,height = 10)
+       season_plot_new,width = 15,height = 10)
 
 

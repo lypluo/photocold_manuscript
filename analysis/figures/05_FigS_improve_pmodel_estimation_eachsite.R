@@ -285,7 +285,7 @@ season_plot<-df_modobs %>%
 
 ####
 #save the plot
-save.path<-"./manuscript/test_files/Diff_parameterization_approach/updated_202206/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_Mekela2008.png"),season_plot,width = 20,height = 20)
+save.path<-"./manuscript/figures/"
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_fT.png"),season_plot,width = 20,height = 20)
 
 

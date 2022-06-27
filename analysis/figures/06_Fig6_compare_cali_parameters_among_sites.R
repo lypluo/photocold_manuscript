@@ -198,6 +198,10 @@ data_sel_final$PFT<-factor(data_sel_final$PFT,levels = c("DBF","MF","ENF"))
 #   "k"=scale_y_continuous(limits = c(-10,15))
 # )
 
+data_sel_final$PFT<-factor(data_sel_final$PFT,levels = c("DBF","MF","ENF"))
+data_sel_final$parameter<-factor(data_sel_final$parameter,levels = c("tau","X0","Smax"))
+
+###plot part 1:
 para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=parameter,y=parameter_value,fill=PFT,col=PFT))+
   geom_point(position = position_jitterdodge())+
   geom_boxplot(alpha=0.6)+
@@ -206,7 +210,8 @@ para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=param
   xlab("Parameters")+
   ylab("")+
   theme_bw()+
-  theme(legend.position = c(0.75,0.18),
+  # theme(legend.position = c(0.75,0.18),
+  theme(
         legend.background = element_blank(),
         legend.title = element_text(size=24),
         legend.text = element_text(size=22),
@@ -215,8 +220,18 @@ para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=param
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         strip.text.x = element_text(size = 22)) ##change the facet label size
+#change the color-blind friendly color==>refer the package colorspace
+#refer:https://stackoverflow.com/questions/57153428/r-plot-color-combinations-that-are-colorblind-accessible
+library(colorspace)
+# mycolors<-rev(sequential_hcl(7,palette = "Viridis")[c(1,3,5)])
+para_sites<-para_sites+
+  # scale_fill_discrete_sequential(palette = "Viridis",alpha=0.5)+
+  # scale_color_discrete_sequential(palette = "Viridis",alpha = 0.5)
+  scale_fill_manual(values = c("DBF"=adjustcolor("orange",alpha.f =0.2),
+        "MF"=adjustcolor("cyan",alpha.f =0.2),"ENF"=adjustcolor("magenta",alpha.f =0.2)))+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan2","ENF"="magenta3"))
 #---------------------------------------------
-#!!!working to here:
+#:
 tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
                       hjust = "", vjust = "", fontface = 2, family = "", ...) {
   
@@ -243,28 +258,29 @@ paras_PFTs_new[paras_PFTs_new$PFT=="DBF",]$x<-0.75
 paras_PFTs_new[paras_PFTs_new$PFT=="ENF",]$x<-1.25
 ##
 paras_PFTs_new$label<-rep("*",nrow(paras_PFTs_new))
-paras_PFTs_new$col<-c(rep("red",5),rep("forestgreen",5),rep("blue",5))
+paras_PFTs_new$col<-c(rep("goldenrod",3),rep("cyan2",3),rep("magenta3",3))
 #
-paras_PFTs_new$PFT<-factor(paras_PFTs_new$PFT,levels = c("DBF","MF","ENF"))
-paras_PFTs_new$parameter<-factor(paras_PFTs_new$parameter,levels = c("a1","b1","a2","b2","k"))
+# paras_PFTs_new$PFT<-factor(paras_PFTs_new$PFT,levels = c("DBF","MF","ENF"))
+# paras_PFTs_new$parameter<-factor(paras_PFTs_new$parameter,levels = c("tau","X0","Smax"))
 paras_boxplot<-tag_facet(para_sites,x=paras_PFTs_new$x,y=paras_PFTs_new$parameter_value,
                          #here I add 1 for y axis since there parameters for PFTs did not display properly
-                           tag_pool = paras_PFTs_new$label,size=10,col=paras_PFTs_new$col)
-
+                           tag_pool = paras_PFTs_new$label,size=12,col=paras_PFTs_new$col)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure6_parameters.png"),paras_boxplot)
+ggsave(paste0(save.path,"Figure6_parameters_boxplot.png"),paras_boxplot)
 
+###plot part 2:
 #----------------scatter plot------------------
 #environmental drivers vs parameters
 library(ggforce)
+library(ggrepel)
 plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   # df_meteo<-df_final_new
   # df_paras<-data_sel_final
   # Env_var<-"tmean"
-  # para<-"a1"
+  # para<-"tau"
   # do_legend=FALSE
-  # for example: Tmin vs a1
+  # for example: Tmean vs tau
   #I.site-level
   df_site_level<-df_meteo %>%
     select(sitename,classid,koeppen_code,Clim.PFTs,para,tmin,temp)
@@ -273,28 +289,6 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   t_pos<-match(Env_var,names(df_site_level))
   df_site_level_new<-df_site_level
   names(df_site_level_new)[t_pos]<-"Env_var"
-  #II.Clim-PFT level---
-  df_Clim_PFT_level<-df_site_level %>%
-    group_by(Clim.PFTs)%>%
-    summarise(tmin=mean(tmin,na.rm=T),
-              tmean=mean(tmean,na.rm=T))
-  #
-  par_Clim_PFT_level<-df_paras[df_paras$flag=="Clim-PFT",]
-  par_Clim_PFT_level<-par_Clim_PFT_level %>%
-    filter(parameter==para)%>%
-    mutate(sitename=NULL,PFT=NULL,flag=NULL,
-           Clim.PFTs=Clim_PFTs,Clim_PFTs=NULL,parameter=NULL)
-  names(par_Clim_PFT_level)<-c("para","Clim.PFTs")
-  #
-  df_Clim_PFT_level_new<-left_join(df_Clim_PFT_level,par_Clim_PFT_level)
-  df_Clim_PFT_level_new$Clim<-substr(df_Clim_PFT_level_new$Clim.PFTs,1,3)
-  df_Clim_PFT_level_new$Clim<-factor(df_Clim_PFT_level_new$Clim,
-                                     levels = c("Cfa","Cfb","Dfb","Dfc"))
-  df_Clim_PFT_level_new$PFT<-substr(df_Clim_PFT_level_new$Clim.PFTs,5,7)
-  df_Clim_PFT_level_new$PFT<-factor(df_Clim_PFT_level_new$PFT,levels = c("DBF","MF","ENF"))
-  #
-  t_pos<-match(Env_var,names(df_Clim_PFT_level_new))
-  names(df_Clim_PFT_level_new)[t_pos]<-"Env_var"
   
   #III.PFT level---
   df_PFT_level<-df_site_level %>%
@@ -314,16 +308,24 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   
   ##----plotting----##
   pars_final<-ggplot()+
-    geom_point(data=df_site_level_new,aes(x=Env_var,y=para,shape=PFT,size="site"))+
-    ggforce::geom_mark_ellipse(data=df_site_level_new,
-    aes(x=Env_var,y=para,label=PFT,shape=PFT),label.fill = "grey",
-    con.border = "one",con.cap = 0,con.size = 1.1,
-    con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##site-level
-    geom_point(data=df_Clim_PFT_level_new,
-               aes(x=Env_var,y=para,shape=PFT,col=Clim,size="Clim-PFT"),alpha=0.8)+ ##Clim-PFT level
-    geom_point(data=df_PFT_level_new,
-               aes(x=Env_var,y=para,shape=PFT,size="PFT"),col="blue",alpha=0.4)+##PFT level
-    scale_size_manual("",values = c("site"=5,"Clim-PFT"=8,"PFT"=15))+
+    geom_point(data=df_site_level_new,aes(x=Env_var,y=para,col=PFT),size=3)+
+    # scale_color_discrete_sequential(palette = "Viridis")+
+    geom_text_repel(data=df_site_level_new,aes(x=Env_var,y=para,label=sitename))+
+    geom_smooth(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+                aes(x=Env_var,y=para,col=PFT),
+                fill=adjustcolor("goldenrod1",0.05),method = "lm",formula = y ~ x,lty=2)+
+    ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+        aes(x=Env_var,y=para,label=PFT,group=PFT,col=PFT),label.fill = "goldenrod1",
+        con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "goldenrod1",
+        con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##DBF
+    geom_smooth(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+          aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1",0.05),
+          method = "lm",formula = y ~ x,lty=2)+
+    ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$Clim.PFTs=="Dfc-ENF",],
+        aes(x=Env_var,y=para,label=Clim.PFTs,group=Clim.PFTs,col=PFT),label.fill = "magenta1",
+        con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "magenta1",
+        con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##Dfc-ENF
+    scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
     xlab(paste0(Env_var," (°C)"))+
     ylab(paste0(para," (°C)"))+
     theme(
@@ -350,33 +352,23 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
 # para<-"a1"
 # do_legend=FALSE
 
-p_tmin_a1<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
-           para = "a1",FALSE)
-p_tmean_b1<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmean",
-                      para = "b1",FALSE)  
-p_tmin_a2<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
-                      para = "a2",FALSE)
-p_tmean_b2<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmean",
-                       para = "b2",FALSE)  
-p_tmean_k<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmean",
-                      para = "k",TRUE)  
+p_tmin_tau<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
+           para = "tau",FALSE)
+p_tmin_X0<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
+                      para = "X0",FALSE)  
+p_tmin_Smax<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
+                      para = "Smax",FALSE)
+
 #change the x labels:
-p_tmin_a1<-p_tmin_a1+xlab(expression("T"[min]*" (°C)"))
-p_tmean_b1<-p_tmean_b1+xlab(expression("T"[mean]*" (°C)"))
-p_tmin_a2<-p_tmin_a2+xlab(expression("T"[min]*" (°C)"))
-p_tmean_b2<-p_tmean_b2+xlab(expression("T"[mean]*" (°C)"))
-p_tmean_k<-p_tmean_k+xlab(expression("T"[mean]*" (°C)"))+
-  theme(legend.position = c(1.7,0.4),
-        legend.spacing.y = unit(0.4, 'cm'),
-        legend.key.size = unit(2,"cm"))+
-  guides(size=guide_legend(ncol=3,byrow=T))+
-  guides(col=guide_legend(ncol = 4,byrow = T,override.aes = list(size = 6)))+
-  guides(shape=guide_legend(ncol = 3,byrow = T,override.aes = list(size = 6)))
-  
+p_tmean_tau<-p_tmean_tau+xlab(expression("T"[min]*" (°C)"))
+p_tmean_X0<-p_tmean_X0+xlab(expression("T"[min]*" (°C)"))
+p_tmean_Smax<-p_tmean_Smax+xlab(expression("T"[min]*" (°C)"))
+
 #merge the plots:
-paras_range<-cowplot::plot_grid(p_tmin_a1,p_tmean_b1,p_tmin_a2,p_tmean_b2,p_tmean_k,
-          nrow = 3,ncol=2,labels = "auto",label_size = 20,align = "hv")
+paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,
+          ncol = 3,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
+
 save.path<-"./manuscript/figures/"
 ggsave(paste0(save.path,"Figure7_parameters_ranges.png"),paras_range,height = 18,width = 20)
 

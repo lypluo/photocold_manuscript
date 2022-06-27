@@ -360,17 +360,21 @@ p_tmin_Smax<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_va
                       para = "Smax",FALSE)
 
 #change the x labels:
-p_tmean_tau<-p_tmean_tau+xlab(expression("T"[min]*" (°C)"))
-p_tmean_X0<-p_tmean_X0+xlab(expression("T"[min]*" (°C)"))
-p_tmean_Smax<-p_tmean_Smax+xlab(expression("T"[min]*" (°C)"))
+p_tmean_tau<-p_tmean_tau+
+  xlab(expression("T"[min]*" (°C)"))+ylab(expression(tau*""))
+p_tmean_X0<-p_tmean_X0+
+  xlab(expression("T"[min]*" (°C)"))+ylab(expression(X[0]*" (°C)"))
+p_tmean_Smax<-p_tmean_Smax+
+  xlab(expression("T"[min]*" (°C)"))+ylab(expression(S[max]*" (°C)"))
 
 #merge the plots:
 paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,
           ncol = 3,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
-
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure7_parameters_ranges.png"),paras_range,height = 18,width = 20)
+ggsave(paste0(save.path,"Figure7_parameters_ranges.png"),paras_range,height = 8,width = 20)
+
+###plot part 3: fT-->Tmean
 
 #############################additional code ###########################
 #----

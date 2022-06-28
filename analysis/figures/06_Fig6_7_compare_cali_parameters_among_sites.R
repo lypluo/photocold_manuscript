@@ -202,11 +202,13 @@ data_sel_final$PFT<-factor(data_sel_final$PFT,levels = c("DBF","MF","ENF"))
 data_sel_final$parameter<-factor(data_sel_final$parameter,levels = c("tau","X0","Smax"))
 
 ###plot part 1:
-para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],aes(x=parameter,y=parameter_value,fill=PFT,col=PFT))+
+my_labeller<-as_labeller(c(tau="tau",X0="X[0]",Smax="S[max]"),default = label_parsed) #change the label of facet
+para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],
+                   aes(x=parameter,y=parameter_value,fill=PFT,col=PFT))+
   geom_point(position = position_jitterdodge())+
   geom_boxplot(alpha=0.6)+
   xlab("")+
-  facet_wrap(~parameter,scales = "free",ncol = 3)+
+  facet_wrap(~parameter,scales = "free",ncol = 3,labeller = my_labeller)+
   xlab("Parameters")+
   ylab("")+
   theme_bw()+
@@ -330,6 +332,7 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     ylab(paste0(para," (°C)"))+
     theme(
       legend.text = element_text(size=22),
+      legend.position = c(0.2,0.85),
       legend.key.size = unit(2, 'lines'),
       axis.title = element_text(size=26),
       axis.text = element_text(size = 22),
@@ -353,18 +356,18 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
 # do_legend=FALSE
 
 p_tmin_tau<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
-           para = "tau",FALSE)
+           para = "tau",TRUE)
 p_tmin_X0<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
                       para = "X0",FALSE)  
 p_tmin_Smax<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_var = "tmin",
                       para = "Smax",FALSE)
 
 #change the x labels:
-p_tmean_tau<-p_tmean_tau+
+p_tmean_tau<-p_tmin_tau+
   xlab(expression("T"[min]*" (°C)"))+ylab(expression(tau*""))
-p_tmean_X0<-p_tmean_X0+
+p_tmean_X0<-p_tmin_X0+
   xlab(expression("T"[min]*" (°C)"))+ylab(expression(X[0]*" (°C)"))
-p_tmean_Smax<-p_tmean_Smax+
+p_tmean_Smax<-p_tmin_Smax+
   xlab(expression("T"[min]*" (°C)"))+ylab(expression(S[max]*" (°C)"))
 
 #merge the plots:

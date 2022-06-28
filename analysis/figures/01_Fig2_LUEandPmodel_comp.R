@@ -165,7 +165,7 @@ df_meandoy %>%
     values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4")
   )
 
-ggsave("./manuscript/test_files/gpp_meandoy.pdf", height = 25, width = 8)
+# ggsave("./manuscript/test_files/gpp_meandoy.pdf", height = 25, width = 8)
 
 ##############################
 ## Normalise to peak season
@@ -246,8 +246,8 @@ df_meandoy_norm %>%
     legend.position = c(0.75,0.05)
   )
 
-ggsave("./manuscript/test_files/gpp_meandoy_norm.pdf", height = 25, width = 8)
-ggsave("./manuscript/figures/FigS_gpp_meandoy_norm.png",width = 20,height = 20)
+# ggsave("./manuscript/test_files/gpp_meandoy_norm.pdf", height = 25, width = 8)
+# ggsave("./manuscript/figures/FigS_gpp_meandoy_norm.png",width = 20,height = 20)
 
 ####################
 #(5)prepare the official plots:
@@ -300,7 +300,7 @@ df_meandoy_norm_Clim_PFTs <- ddf_norm %>%
   dplyr::summarise(across(starts_with("gpp_"), mean, na.rm = TRUE))
 
 #Figure for Clim.-PFTs
-df_meandoy_norm_Clim_PFTs %>% 
+plot_final<-df_meandoy_norm_Clim_PFTs %>% 
   filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
   pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd,gpp_lmer), names_to = "model", values_to = "gpp") %>%
   mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd","gpp_lmer")) %>%
@@ -317,7 +317,7 @@ df_meandoy_norm_Clim_PFTs %>%
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-     "gpp_pmodel" = "red", "gpp_lmer" = "royalblue"),
+     "gpp_pmodel" = "red", "gpp_lmer" = "dodgerblue"),
      labels = c("Observations","P-model","LUE-lme")) +
   theme(
     legend.text = element_text(size=20),
@@ -331,4 +331,4 @@ df_meandoy_norm_Clim_PFTs %>%
     # legend.background = element_blank(),
     legend.position = c(0.75,0.1)
   )
-ggsave("./manuscript/figures/Figure2_gpp_meandoy_norm_forClimPFTs.png",width = 15,height = 10)
+ggsave("./manuscript/figures/Figure2_gpp_meandoy_norm_forClimPFTs.png",plot_final,width = 15,height = 10)

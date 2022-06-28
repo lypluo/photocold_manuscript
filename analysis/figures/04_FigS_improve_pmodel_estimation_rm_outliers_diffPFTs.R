@@ -464,7 +464,7 @@ df_modobs %>%
   pivot_longer(c(obs,mod_old_ori,mod_recent_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
-  scale_color_manual(values = c("mod_old_ori" = "red","mod_recent_ori"="steelblue2",
+  scale_color_manual(values = c("mod_old_ori" = "red","mod_recent_ori"="dodgerblue",
                                 "mod_recent_optim" = "orange", "obs" = "black"),
                      labels = c("Old P-model","Recent Ori P-model", "Recent Optim P-model","Obs.")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
@@ -535,7 +535,7 @@ season_plot<-test %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
+                                              "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
@@ -582,7 +582,7 @@ test %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "red",
-                                              "mod_recent_optim" = "green4", "obs" = "gray4"),
+                                              "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +

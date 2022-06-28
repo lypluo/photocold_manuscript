@@ -155,6 +155,7 @@ gg_merge_with_sitename_new<-gg+
   geom_label_repel(data=ori_coord_sites,aes(x=lon,y=lat,label = sitename,fill = koeppen_code),
                    color = 'black',max.overlaps = 50,label.size = 0.1,arrow = arrow(ends = "first",length = unit(0.05,"inch")),
                    size = 2.5) +
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   theme_grey()+
   theme(legend.position = "bottom",
         legend.title = element_text(size=20),
@@ -168,6 +169,6 @@ save.path<-"./manuscript/figures/"
 # ggsave(file=paste0(save.path,"sites_distribution_no_sitenames.png"),gg_merge_no_sitenames,dev="png",width = 12,height=6)
 # plot(gg_merge_with_sitenames)
 # ggsave(file=paste0(save.path,"sites_distribution_with_sitenames.png"),gg_merge_with_sitenames,dev="png",width = 12,height=6)
-plot(gg_merge_with_sitename_new)
+# plot(gg_merge_with_sitename_new)
 ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_sitenames_new.png"),gg_merge_with_sitename_new,dev="png",width = 12,height=7)
 

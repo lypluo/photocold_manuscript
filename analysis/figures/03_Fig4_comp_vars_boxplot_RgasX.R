@@ -174,10 +174,10 @@ library(ggpubr)
 Classify_Nbins_andPlot<-function(df,class_dday_range,class_var,N,do_manual_class,PFT_name){
   # df<-df_len5_nonnorm
   # class_dday_range<-c(-60,70)
-  # class_var<-"SW_IN_midday_mean_fluxnet2015"
+  # class_var<-"SW_IN_fullday_mean_fluxnet2015"
   # N<-10
   # do_manual_class<-FALSE
-  # PFT_name<-"all PFTs"
+  # PFT_name<-"All PFTs"
   #----------------
   #do classification:
   #----------------
@@ -197,11 +197,17 @@ Classify_Nbins_andPlot<-function(df,class_dday_range,class_var,N,do_manual_class
   }
   
   # Bins for different variables
-  xmin<-round(min(df.all[,class_var],na.rm = T),10)
-  xmax<-round(max(df.all[,class_var],na.rm = T),10)         
-  bins  <- seq( from=xmin, 
-                to=xmax, by=(xmax-xmin)/N )
-  
+  t_var<-df.all[,class_var]
+  xmin<-round(min(t_var,na.rm = T),-1)
+  xmax<-round(max(t_var,na.rm = T),-2)         
+  # bins  <- seq( from=xmin, 
+  #               to=xmax, by=(xmax-xmin)/N )
+  if(class_var=="SW_IN_midday_mean_fluxnet2015"){
+    bins<-c(xmin,125,250,375,500,625,750,875,1000)
+  }
+  if(class_var=="PPFD_IN_fullday_mean_fluxnet2015"){
+    bins<-c(0,200,400,600,800,1000,1200,1400,1600)
+  }
   #this is range setting for Tmin not for Rg
   if(do_manual_class==TRUE){
     xmin<-c(-40)
@@ -241,10 +247,10 @@ comp_boxplot<-function(df,comp_yvar,do_legend,end_xylab,PFT_name){
     geom_boxplot()+
     # annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+  #
     scale_fill_manual("",values = c("GPP overestimated sites"=adjustcolor("tomato",1),
-                    "GPP non-overestimated sites"=adjustcolor("green4",1)))+
+                    "GPP non-overestimated sites"=adjustcolor("dodgerblue",1)))+
     geom_hline(yintercept = 0,linetype="dotted",size=1.1)+
     theme_classic()+
-    theme(legend.position = c(0.225,0.95),legend.background = element_blank(),
+    theme(legend.position = c(0.25,0.99),legend.background = element_blank(),
           legend.text = element_text(size=24),
           axis.title = element_text(size = 30),
           axis.text = element_text(size = 24),
@@ -265,9 +271,12 @@ comp_boxplot<-function(df,comp_yvar,do_legend,end_xylab,PFT_name){
       theme(legend.position = "none")
   }
   #add the PFT name:
-  N_x<-length(unique(df.tidy$inbin))
   p_plot_main<-p_plot_main+
-    annotate(geom = "text",x=N_x/1.7,y=28,label=PFT_name,col="blue",size=10)
+    ggtitle(PFT_name)+
+    theme(title = element_text(size = 28))
+  # N_x<-length(unique(df.tidy$inbin))
+  # p_plot_main<-p_plot_main+
+  #   annotate(geom = "text",x=N_x/1.7,y=28,label=PFT_name,col="blue",size=10)
    #
   return(p_plot_main)
 }

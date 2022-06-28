@@ -409,7 +409,7 @@ season_plot<-df_modobs %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
+                                "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
                      labels = c("Orig. P-model", "Cali. P-model","Obseravations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +

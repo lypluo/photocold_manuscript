@@ -304,10 +304,10 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       #some changes here
       annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
       geom_line(aes(x=dday,y=q50,col=flag),size=1.05)+
-      scale_color_manual("",values = c("GPP overestimated sites"="red","GPP non-overestimated sites"="green4"))+
+      scale_color_manual("",values = c("GPP overestimated sites"="red","GPP non-overestimated sites"="blue"))+
       # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
       geom_ribbon(aes(x=dday,ymin=q25,ymax=q75,fill=flag),alpha=0.4)+
-      scale_fill_manual("",values = c("GPP overestimated sites"="red","GPP non-overestimated sites"="green4"))+
+      scale_fill_manual("",values = c("GPP overestimated sites"="red","GPP non-overestimated sites"="dodgerblue"))+
       ylab(paste0(comp_var," ",var_unit))+
       theme_classic()+
       theme(legend.position = c(0.4,0.9),legend.background = element_blank(),

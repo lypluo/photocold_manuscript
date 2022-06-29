@@ -152,9 +152,10 @@ gg_merge_with_sitenames<-gg+
 gg_merge_with_sitename_new<-gg+
   # geom_point(data=ori_coord_sites,aes(x=lon,y=lat,col="Original"),size=2,pch=16,)+
   geom_point(data=final_coord_sites,aes(x=lon,y=lat,col=PFT),size=2.5,pch=16)+
-  geom_label_repel(data=ori_coord_sites,aes(x=lon,y=lat,label = sitename,fill = koeppen_code),
-                   color = 'black',max.overlaps = 50,label.size = 0.1,arrow = arrow(ends = "first",length = unit(0.05,"inch")),
-                   size = 2.5) +
+  geom_label_repel(data=ori_coord_sites,aes(x=lon,y=lat,label = sitename,fill = koeppen_code),col="blue",
+                   max.overlaps = 50,label.size = 0.1,
+                   arrow = arrow(ends = "first",length = unit(0.05,"inch")),
+                   size = 2.8) +
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   theme_grey()+
   theme(legend.position = "bottom",

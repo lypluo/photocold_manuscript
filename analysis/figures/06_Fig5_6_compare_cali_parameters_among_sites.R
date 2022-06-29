@@ -269,7 +269,7 @@ paras_boxplot<-tag_facet(para_sites,x=paras_PFTs_new$x,y=paras_PFTs_new$paramete
                            tag_pool = paras_PFTs_new$label,size=12,col=paras_PFTs_new$col)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure6_parameters_boxplot.png"),paras_boxplot)
+ggsave(paste0(save.path,"Figure5_parameters_boxplot.png"),paras_boxplot)
 
 ###plot part 2:
 #----------------scatter plot------------------
@@ -279,7 +279,7 @@ library(ggrepel)
 plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   # df_meteo<-df_final_new
   # df_paras<-data_sel_final
-  # Env_var<-"tmean"
+  # Env_var<-"tmin"
   # para<-"tau"
   # do_legend=FALSE
   # for example: Tmean vs tau
@@ -293,9 +293,10 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   names(df_site_level_new)[t_pos]<-"Env_var"
   
   #III.PFT level---
-  df_PFT_level<-df_site_level %>%
+  df_PFT_level<-df_site_level%>%
+    mutate(PFT=factor(PFT,levels = c("DBF","MF","ENF")))%>%
     group_by(PFT)%>%
-    summarise(tmin=mean(tmin,na.rm=T),
+    dplyr::summarise(tmin=mean(tmin,na.rm=T),
               tmean=mean(tmean,na.rm=T))
   par_PFT_level<-df_paras[df_paras$flag=="PFT",] %>%
     mutate(sitename=NULL,Clim_PFTs=NULL,flag=NULL)%>%
@@ -375,9 +376,7 @@ paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,
           ncol = 3,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure7_parameters_ranges.png"),paras_range,height = 8,width = 20)
-
-###plot part 3: fT-->Tmean
+ggsave(paste0(save.path,"Figure6_parameters_ranges.png"),paras_range,height = 10,width = 18)
 
 #############################additional code ###########################
 #----

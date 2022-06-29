@@ -189,5 +189,5 @@ plot_fT<-ggplot()+
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure8_fT_vs_Ta.png"),plot_fT)
+ggsave(paste0(save.path,"Figure7_fT_vs_Ta.png"),plot_fT)
 

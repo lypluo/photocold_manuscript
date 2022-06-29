@@ -402,7 +402,7 @@ save.path<-"./manuscript/figures/"
 p_SW_IN_Tmin<-plot_grid(p_SW_midday_mean_tmin_all,p_SW_midday_mean_tmin_DBF,
                         p_SW_midday_mean_tmin_MF,p_SW_midday_mean_tmin_ENF,
                         nrow = 2,ncol=2,labels = "auto",label_size = 20,align = "hv")
-ggsave(paste0(save.path,"Figure3_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 23,height = 19)
+ggsave(paste0(save.path,"Figure4_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 23,height = 19)
 #
 p_ppfd_Tmin<-plot_grid(p_ppfd_midday_mean_tmin_all,p_ppfd_midday_mean_tmin_DBF,
                         p_ppfd_midday_mean_tmin_MF,p_ppfd_midday_mean_tmin_ENF,

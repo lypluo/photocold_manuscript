@@ -452,7 +452,7 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_1set_parameter_fT.png"),
+ggsave(paste0(save.path,"Figure4_pmodel_vs_obs_forClimPFTs_1set_parameter_fT.png"),
        season_plot_new,width = 15,height = 10)
 
 

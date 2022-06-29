@@ -516,7 +516,7 @@ p_merge_1<-plot_grid(
   p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure3_ppfd_Tmin.png"),p_merge_1,width = 15,height = 8)
+ggsave(paste0(save.path,"Figure2_ppfd_Tmin.png"),p_merge_1,width = 15,height = 8)
 
 #Figure Sxx:
 p_merge_S<-plot_grid(

@@ -166,7 +166,7 @@ df_sum_new<-left_join(df_sum,pars_final,by="sitename")
 #--------------------------
 library(ggrepel)
 plot_data<-df_sum_new %>%
-  select(sitename,temp,prec,tmin,fT,classid,Clim.PFTs,tau:k)%>%
+  dplyr::select(sitename,temp,prec,tmin,fT,classid,Clim.PFTs,tau:k)%>%
   mutate(PFT=classid,classid=NULL)
 plot_fT<-ggplot()+
   geom_point(data = plot_data,aes(x=temp,y=fT,col=PFT,size=prec))+
@@ -174,6 +174,13 @@ plot_fT<-ggplot()+
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   geom_smooth(data=plot_data,aes(x=temp,y=fT),col="blue",
               method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=plot_data,
+                 aes(x=temp,y=fT,
+                     label = paste(
+                                   after_stat(rr.label),
+                                   after_stat(p.value.label),
+                                   sep = "*\", \"*"),
+                     ),col="blue")+
   xlab(expression(T[mean]*" (°C)"))+
   ylab(expression(f[T]))+
   theme(
@@ -189,5 +196,5 @@ plot_fT<-ggplot()+
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure7_fT_vs_Ta.png"),plot_fT)
+ggsave(paste0(save.path,"Figure7_fT_vs_Ta.png"),plot_fT,height = 5,width = 9)
 

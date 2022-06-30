@@ -3,7 +3,9 @@
 #parameters for each site
 ##---------------------------------------
 library(dplyr)
-devtools::load_all("D:/Github/rbeni/")
+library(devtools)
+# devtools::load_all("D:/Github/rbeni/")
+# install_github("stineb/rbeni")
 library(rbeni) #-->make the evaluation plot
 library(tidyverse)
 library(cowplot)
@@ -131,7 +133,7 @@ for (i in 1:length(vars.names)) {
 ##----------boxplot---------------------
 #a. first for site-level parameters
 data_sel_sites<-df_final_new %>%
-  select(sitename,classid,tau:k)%>%
+  dplyr::select(sitename,classid,tau:k)%>%
   pivot_longer(c(tau:k),names_to = "parameter",values_to = "parameter_value")
 #only focus on the tau,X0,Smax
 data_sel_sites<-data_sel_sites %>%
@@ -154,7 +156,7 @@ paras_PFTs$PFT<-c("DBF","MF","ENF")
 names(paras_PFTs)<-c("tau","X0","Smax","k","PFT")
 #
 data_sel_PFTs<-paras_PFTs %>%
-  select(tau:Smax,PFT)%>%
+  dplyr::select(tau:Smax,PFT)%>%
   pivot_longer(c(tau,X0,Smax),names_to = "parameter",values_to = "parameter_value")
 data_sel_PFTs$flag=rep("PFT",nrow(data_sel_PFTs))
 #
@@ -175,7 +177,7 @@ names(paras_Clim_PFTs)<-c("tau","X0","Smax","k")
 paras_Clim_PFTs$Clim_PFTs<-names(par_Clim_PFTs)
 #
 data_sel_Clim_PFTs<-paras_Clim_PFTs %>%
-  select(tau:Smax,Clim_PFTs)%>%
+  dplyr::select(tau:Smax,Clim_PFTs)%>%
   pivot_longer(c(tau,X0,Smax),names_to = "parameter",values_to = "parameter_value")
 data_sel_Clim_PFTs$flag=rep("Clim-PFT",nrow(data_sel_Clim_PFTs))
 
@@ -280,12 +282,12 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   # df_meteo<-df_final_new
   # df_paras<-data_sel_final
   # Env_var<-"tmin"
-  # para<-"tau"
+  # para<-"X0"
   # do_legend=FALSE
   # for example: Tmean vs tau
   #I.site-level
   df_site_level<-df_meteo %>%
-    select(sitename,classid,koeppen_code,Clim.PFTs,para,tmin,temp)
+    dplyr::select(sitename,classid,koeppen_code,Clim.PFTs,para,tmin,temp)
   names(df_site_level)<-c("sitename","PFT","Clim.","Clim.PFTs","para","tmin","tmean")
   #
   t_pos<-match(Env_var,names(df_site_level))
@@ -310,20 +312,52 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   names(df_PFT_level_new)[t_pos]<-"Env_var"
   
   ##----plotting----##
+  library(ggpmisc)  
+  # library(ggpubr)
+  #linear regression:
+  #----DBF------
+  lm_DBF<-lm(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+     para~Env_var)
+  stat_lm_DBF<-summary(lm_DBF)
+  stat_DBF_label<-data.frame(r.squared=round(stat_lm_DBF$r.squared,2),
+                         p.value=round(coef(stat_lm_DBF)[2,4],4))
+  #----Dfc-ENF-----
+  lm_Dfc_ENF<-lm(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+             para~Env_var)
+  stat_lm_Dfc_ENF<-summary(lm_Dfc_ENF)
+  stat_Dfc_ENF_label<-data.frame(r.squared=round(stat_lm_Dfc_ENF$r.squared,2),
+                         p.value=round(coef(stat_lm_Dfc_ENF)[2,4],4))
+  
   pars_final<-ggplot()+
     geom_point(data=df_site_level_new,aes(x=Env_var,y=para,col=PFT),size=3)+
     # scale_color_discrete_sequential(palette = "Viridis")+
-    geom_text_repel(data=df_site_level_new,aes(x=Env_var,y=para,label=sitename))+
-    geom_smooth(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+    geom_text_repel(data=df_site_level_new,aes(x=Env_var,y=para,label=sitename),size=5)+
+    stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
                 aes(x=Env_var,y=para,col=PFT),
-                fill=adjustcolor("goldenrod1",0.05),method = "lm",formula = y ~ x,lty=2)+
+                fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2)+
+    # stat_poly_eq(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+    #                aes(x=Env_var,y=para,col=PFT,
+    #                    label = paste(
+    #                                  # after_stat(grp.label), "*\"：\"*",
+    #                                  # after_stat(eq.label), "*\", \"*",
+    #                                  after_stat(rr.label), 
+    #                                  after_stat(p.value.label),
+    #                                  sep = "*\", \"*"),
+    #                    label.x=0.5,label.y="bottom"))+
     ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
         aes(x=Env_var,y=para,label=PFT,group=PFT,col=PFT),label.fill = "goldenrod1",
         con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "goldenrod1",
         con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##DBF
-    geom_smooth(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
-          aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1",0.05),
+    stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+          aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
           method = "lm",formula = y ~ x,lty=2)+
+    # stat_poly_eq(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+    #                  aes(x=Env_var,y=para,col=PFT,
+    #                     label = paste(
+    #                       after_stat(rr.label), 
+    #                       after_stat(p.value.label),
+    #                       sep = "*\", \"*"),
+    #                 label.x=0.5,label.y="bottom"))+
     ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$Clim.PFTs=="Dfc-ENF",],
         aes(x=Env_var,y=para,label=Clim.PFTs,group=Clim.PFTs,col=PFT),label.fill = "magenta1",
         con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "magenta1",
@@ -333,7 +367,7 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     ylab(paste0(para," (°C)"))+
     theme(
       legend.text = element_text(size=22),
-      legend.position = c(0.2,0.85),
+      legend.position = c(0.15,0.8),
       legend.key.size = unit(2, 'lines'),
       axis.title = element_text(size=26),
       axis.text = element_text(size = 22),
@@ -342,6 +376,39 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
       panel.grid.minor = element_blank(),
       panel.background = element_rect(colour ="grey",fill="white")
     )
+  if(para=="tau"){
+    pars_final<-pars_final+
+    annotate(geom = "text",x=-4.1,y=24,label = paste0("italic(R) ^ 2 == ",
+                      stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
+    annotate(geom = "text",x=1,y=24,label = paste0("italic(p) ==",
+                      round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
+    annotate(geom = "text",x=-4.1,y=22,label = paste0("italic(R) ^ 2 == ",
+                      stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta",size=5)+
+    annotate(geom = "text",x=1,y=22,label = paste0("italic(p) == ",
+                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta",size=5)
+  }
+  if(para=="X0"){
+    pars_final<-pars_final+
+      annotate(geom = "text",x=-10,y=5,label = paste0("italic(R) ^ 2 == ",
+                     stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
+      annotate(geom = "text",x=-5,y=5,label = paste0("italic(p) ==",
+                     round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
+      annotate(geom = "text",x=-10,y=4,label = paste0("italic(R) ^ 2 == ",
+                     stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta1",size=5)+
+      annotate(geom = "text",x=-5,y=4,label = paste0("italic(p) == ",
+                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
+  }
+  if(para=="Smax"){
+    pars_final<-pars_final+
+      annotate(geom = "text",x=-10,y=25,label = paste0("italic(R) ^ 2 == ",
+                     stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
+      annotate(geom = "text",x=-5,y=25,label = paste0("italic(p) ==",
+                     round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
+      annotate(geom = "text",x=-10,y=23.5,label = paste0("italic(R) ^ 2 == ",
+                     stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta1",size=5)+
+      annotate(geom = "text",x=-5,y=23.5,label = paste0("italic(p) == ",
+                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
+  }
   if(do_legend==FALSE){
     pars_final<-pars_final+
       theme(legend.position = "none")
@@ -365,18 +432,20 @@ p_tmin_Smax<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_va
 
 #change the x labels:
 p_tmean_tau<-p_tmin_tau+
-  xlab(expression("T"[min]*" (°C)"))+ylab(expression(tau*""))
+  # xlab(expression("T"[min]*" (°C)"))+ylab(expression(tau*""))+
+  xlab("")+ylab(expression(tau*""))
 p_tmean_X0<-p_tmin_X0+
-  xlab(expression("T"[min]*" (°C)"))+ylab(expression(X[0]*" (°C)"))
+  xlab(expression("T"[min]*" (°C)"))+ylab(expression(X[0]*" (°C)"))+
+  xlab("")+ylab(expression(X[0]*" (°C)"))
 p_tmean_Smax<-p_tmin_Smax+
   xlab(expression("T"[min]*" (°C)"))+ylab(expression(S[max]*" (°C)"))
 
 #merge the plots:
-paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,
-          ncol = 3,labels = "auto",label_size = 20,align = "hv")
+paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,nrow=3,
+          ncol = 1,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure6_parameters_ranges.png"),paras_range,height = 10,width = 20)
+ggsave(paste0(save.path,"Figure6_parameters_ranges.png"),paras_range,height = 20,width =10)
 
 #############################additional code ###########################
 #----

@@ -445,7 +445,7 @@ paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,nrow=3,
           ncol = 1,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure6_parameters_ranges.png"),paras_range,height = 20,width =10)
+ggsave(paste0(save.path,"Figure6_parameters_ranges.png"),paras_range,height = 21,width =10)
 
 #############################additional code ###########################
 #----

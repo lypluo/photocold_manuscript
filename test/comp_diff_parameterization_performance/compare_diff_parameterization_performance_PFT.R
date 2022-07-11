@@ -291,7 +291,7 @@ df_merge_new %>%
 #(1) For General plots
 # devtools::load_all("D:/Github/rbeni/")
 # library(rbeni) #-->make the evaluation plot
-library(rbeni)
+# library(rbeni)
 library(cowplot)
 library(grid)
 
@@ -456,7 +456,7 @@ season_plot<-df_modobs %>%
                                               "mod_recent_Beni" = "steelblue2",
                                               "mod_recent_Mekela" = "orange",
                                               "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+      labels = c("Orig. P-model", "Cali. P-model(Beni)","Cali. P-model(Mekela)","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # annotate(geom="text",x=200,y=2,label="")+
@@ -659,3 +659,60 @@ test %>%
     legend.position = "bottom"
   )
 
+#---------------------------------------
+#(6) stats summary
+#---------------------------------------
+library(sirad)
+stats_summary<-function(df,sel_vars){
+  # df<-test
+  # sel_vars<-c("gpp_mod_recent_Beni")
+  
+  df.new<-df %>%
+    select(sitename,classid,doy,Clim_PFTs,sel_vars,gpp_obs)
+  names(df.new)<-c("sitename","PFT","doy","Clim.PFTs","mod","obs")
+  
+  stat.PFTs<-df.new %>%
+    group_by(PFT)%>%
+    summarise(N=as.numeric(modeval(mod,obs,stat = "N")),
+              MBE=as.numeric(modeval(mod,obs,stat = "MBE")),
+              MAE=as.numeric(modeval(mod,obs,stat = "MAE")),
+              RMSE=as.numeric(modeval(mod,obs,stat = "RMSE")),
+              R2=as.numeric(modeval(mod,obs,stat = "R2")),
+              EF=as.numeric(modeval(mod,obs,stat = "EF")))
+  stat.PFTs_spring<-df.new %>%
+    filter(doy>=60 & doy<=121)%>%
+    group_by(PFT)%>%
+    summarise(N=as.numeric(modeval(mod,obs,stat = "N")),
+              MBE=as.numeric(modeval(mod,obs,stat = "MBE")),
+              MAE=as.numeric(modeval(mod,obs,stat = "MAE")),
+              RMSE=as.numeric(modeval(mod,obs,stat = "RMSE")),
+              R2=as.numeric(modeval(mod,obs,stat = "R2")),
+              EF=as.numeric(modeval(mod,obs,stat = "EF")))
+  ##
+  stat.Clim.PFTs<-df.new %>%
+    group_by(Clim.PFTs)%>%
+    summarise(N=as.numeric(modeval(mod,obs,stat = "N")),
+              MBE=as.numeric(modeval(mod,obs,stat = "MBE")),
+              MAE=as.numeric(modeval(mod,obs,stat = "MAE")),
+              RMSE=as.numeric(modeval(mod,obs,stat = "RMSE")),
+              R2=as.numeric(modeval(mod,obs,stat = "R2")),
+              EF=as.numeric(modeval(mod,obs,stat = "EF")))
+  stat.Clim.PFTs_spring<-df.new %>%
+    filter(doy>=60 & doy<=121)%>%
+    group_by(Clim.PFTs)%>%
+    summarise(N=as.numeric(modeval(mod,obs,stat = "N")),
+              MBE=as.numeric(modeval(mod,obs,stat = "MBE")),
+              MAE=as.numeric(modeval(mod,obs,stat = "MAE")),
+              RMSE=as.numeric(modeval(mod,obs,stat = "RMSE")),
+              R2=as.numeric(modeval(mod,obs,stat = "R2")),
+              EF=as.numeric(modeval(mod,obs,stat = "EF")))
+  
+  
+stats_sum<-list(stat.PFTs=stat.PFTs,stat.PFTs_spring=stat.PFTs_spring,
+                stat.Clim.PFTs=stat.Clim.PFTs,stat.Clim.PFTs_spring=stat.Clim.PFTs_spring)
+return(stats_sum)
+}
+
+#stats for Beni's method:
+stats_Beni<-stats_summary(test,c("gpp_mod_recent_Beni"))
+stats_Mekela<-stats_summary(test,c("gpp_mod_recent_Mekela"))

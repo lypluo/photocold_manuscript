@@ -1,0 +1,109 @@
+---
+title: "compare_diff_parameterization_performance"
+author: "Yunpeng"
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+### Aim: to compare the model peformance by adopting two parameterization methods:
+1) Beni's method    
+2) Mekela et al., 2008 
+
+```{r include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(GenSA)
+library(lubridate)
+#
+# remotes::install_github("computationales/ingestr") #install the package
+library(ingestr)
+
+#-------------------------
+#(1)load the data and hardening funciton
+#-------------------------
+df_recent <- read_rds(paste0("../data-raw/raw_data/P_model_output/model_data.rds")) %>%
+  mutate(
+    year = format(date, "%Y")
+  ) %>%
+  na.omit()
+
+sites<-unique(df_recent$sitename)
+#
+library(ggplot2)
+for (i in 1:length(sites)) {
+  df_temp<-df_recent %>%
+    filter(sitename==sites[i])
+  text.Date<-min(df_temp$date)+c(max(df_temp$date)-min(df_temp$date))*0.1
+  #
+  df_plot<-df_temp %>%
+    ggplot()+
+    geom_point(aes(x=date,y=gpp))+
+    geom_point(aes(x=date,y=gpp_mod),col="red")+
+    annotate(geom = "text",x=text.Date,y=15,label=sites[i])
+  #
+  k=quantile(df_temp$gpp,probs = c(0.01,0.05,seq(0.1,0.9,0.1)),0.95,0.99)
+  df_plot+
+    geom_hline(yintercept = k,col="blue")
+}
+
+#filter the observational gpp data:
+# df_recent_new<-c()
+# for (i in 1:length(sites)) {
+#   df_temp<-df_recent %>%
+#     filter(sitename==sites[i])
+#   #filter the gpp observation data(remove the gpp that below 5 percentile and negative):
+#   k=quantile(df_temp$gpp,probs = c(0.01,0.05,seq(0.1,0.9,0.1)),0.95,0.99)
+#   df_temp$gpp[df_temp$gpp<as.numeric(k[2])& df_temp$gpp<0]<-NA
+#   # df_temp %>%
+#   #   ggplot()+
+#   #   geom_point(aes(x=date,y=gpp))+
+#   #   geom_point(aes(x=date,y=gpp_mod),col="red")+
+#   #   annotate(geom = "text",x=text.Date,y=15,label=sites[i])
+#   df_recent_new<-rbind(df_recent_new,df_temp)
+# }
+
+#do not filter the observation gpp in study:
+df_recent_new<-df_recent
+
+#load the data Beni sent me before:
+df_old<-read.csv(file=paste0("./data-raw/raw_data/Data_sent_by_Beni/","ddf_fluxnet2015_pmodel_with_forcings_stocker19gmd.csv"))
+df_old<-df_old %>%
+  mutate(date=lubridate::mdy(date),
+         year=lubridate::year(date)) %>%
+  na.omit(gpp_obs)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

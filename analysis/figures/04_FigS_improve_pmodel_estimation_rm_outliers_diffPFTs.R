@@ -66,17 +66,17 @@ df_old<-df_old %>%
          year=lubridate::year(date)) %>%
   na.omit(gpp_obs)
 ##------------------
-plot_temp<-df_old %>%
-  mutate(doy=lubridate::yday(date))%>%
-  select(sitename,doy,gpp_mod_FULL,gpp_mod_ORG)%>%
-  group_by(sitename,doy)%>%
-  summarise(gpp_mod_ORG=mean(gpp_mod_ORG),gpp_mod_FULL=mean(gpp_mod_FULL))%>%
-  pivot_longer(c(gpp_mod_FULL,gpp_mod_ORG),values_to = "GPP",names_to = "Source")%>%
-  ggplot(aes(x=doy,y=GPP,col=Source))+
-  geom_point()+
-  facet_wrap(.~sitename)
-temp.path<-"./manuscript/test_files/"
-ggsave(plot_temp,filename = paste0(temp.path,"gpp_Pmodel_GPP_Full_vs_GPP_ORG.pdf"),width = 15,height = 10)
+# plot_temp<-df_old %>%
+#   mutate(doy=lubridate::yday(date))%>%
+#   select(sitename,doy,gpp_mod_FULL,gpp_mod_ORG)%>%
+#   group_by(sitename,doy)%>%
+#   summarise(gpp_mod_ORG=mean(gpp_mod_ORG),gpp_mod_FULL=mean(gpp_mod_FULL))%>%
+#   pivot_longer(c(gpp_mod_FULL,gpp_mod_ORG),values_to = "GPP",names_to = "Source")%>%
+#   ggplot(aes(x=doy,y=GPP,col=Source))+
+#   geom_point()+
+#   facet_wrap(.~sitename)
+# temp.path<-"./manuscript/test_files/"
+# ggsave(plot_temp,filename = paste0(temp.path,"gpp_Pmodel_GPP_Full_vs_GPP_ORG.pdf"),width = 15,height = 10)
 #####
 # source(paste0("./R/functions_in_model/model_hardening_byBeni_addbaseGDD_rev.R"))
 source(paste0("./R/functions_in_model/newly_formulated_fun/model_fT_rev.R"))

@@ -1,0 +1,2 @@
+In this analysis, we would like to mainly test:
+ - if empirical LUE model(LUE=f(VPD,Ta) works similarly (simulated GPP vs observed GPP)if we use the data from 1) beyond the green-up; 2)beyond the spring (Mar-May); 3)all the period; 

@@ -2,9 +2,7 @@
 #Aim:comparing the simple LUE, P-model and EC based GPP:
 #-->to check if only consider the instanenous environmental vars will result in 
 #overestimation of GPP:
-#！update Aug, 2022-->notice that empirical LUE model only using the LUE during the green-up period
-# -->should have some problem-->update here using the data during all the period
-
+##-->using the data beyond the spring (March-May) to fit LUE model
 #############################################
 library(dplyr)
 library(lubridate)
@@ -14,7 +12,6 @@ library(lme4)
 library(tidyverse)
 # remotes::install_github("computationales/ingestr") #install the package
 library(ingestr)
-devtools::load_all("D:/Github/rbeni/")
 library(rbeni)
 
 #-----------------
@@ -53,7 +50,7 @@ ddf <- df_final %>%
 
 ## Empirical LUE models
 # Determine bias of early season bias of empirical LUE models 
-# by fitting models using the data from all the period-->
+# by fitting models outside greenup period.-->
 # two LUE model: constant LUE and LUE with VPD and temp as the drivers
 ddf <- ddf %>% 
   #the variables of ppfd_fluxnet2015 has some probelm==> using PPFD_IN_fullday_mean_fluxnet2015
@@ -72,15 +69,18 @@ ddf %>%
 
 ###2a).LUE model
 ##take mean LUE for constant-LUE model
+#using the data beyond spirng:March-May
 mod_constlue <- ddf %>% 
   # filter(!greenup) %>% 
-  pull(lue) %>%   #pull() is similar to $
+  filter(doy>=60 & doy<=151)%>%
+  pull(lue) %>% 
   mean(., na.rm = TRUE)
 
 ## LUE as a linear function of temp and vpd
 mod_lue_temp_vpd <- lm(lue ~ temp_day_fluxnet2015 + vpd_day_fluxnet2015, 
-                       data = ddf 
-                       # %>% filter(!greenup)
+                       data = ddf %>% 
+                      # filter(!greenup)
+                      filter(doy>=60 & doy<=151)
                        )
 ##2b.) add year and elevation mixed effects model
 ddf <- ingestr::siteinfo_fluxnet2015 %>%
@@ -91,6 +91,7 @@ ddf <- ingestr::siteinfo_fluxnet2015 %>%
 ##remove the na values and infinite data
 tmp <- ddf %>% 
   # dplyr::filter(!greenup) %>%
+  filter(doy>=60 & doy<=151)%>%
   dplyr::filter(PPFD_IN_fullday_mean_fluxnet2015 > 5) %>% 
   dplyr::select(temp_day_fluxnet2015, vpd_day_fluxnet2015, lue, sitename, year) %>%
   drop_na() %>% 
@@ -251,7 +252,7 @@ plot_sites<-df_meandoy_norm %>%
   )
 
 # ggsave("./manuscript/test_files/gpp_meandoy_norm.pdf", height = 25, width = 8)
-ggsave("./manuscript/figures/FigS_eachsite_gpp_meandoy_norm_rev.png",width = 20,height = 20)
+ggsave("./manuscript/test_files/constant_LUE_model_performance/FigS_eachsite_gpp_meandoy_norm_beyond_spring.png",width = 20,height = 20)
 
 ####################
 #(5)prepare the official plots:
@@ -335,4 +336,4 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
     # legend.background = element_blank(),
     legend.position = c(0.75,0.1)
   )
-ggsave("./manuscript/figures/Figure1_gpp_meandoy_norm_forClimPFTs_rev.png",plot_final,width = 15,height = 10)
+ggsave("./manuscript/test_files/constant_LUE_model_performance/Figure1_gpp_meandoy_norm_forClimPFTs_beyond_spring.png",plot_final,width = 15,height = 10)

@@ -3,6 +3,7 @@
 #-------------------------------------------------------------------------
 #(1)load the data that includes the "is_event" information
 #-------------------------------------------------------------------------
+library(dplyr)
 #---------------------
 #A.load the event_length data
 #---------------------
@@ -159,6 +160,26 @@ for(i in 1:length(df_len5_nonnorm)){
   #assign value back:
   df_len5_nonnorm[[i]]<-df_proc
 }
+###adding Aug,2022-->compare the difference between "overestimated" and "non-overstimated"
+##site years regarding the Tmin.
+df_GPP_over<-df_len5_nonnorm$df_dday
+df_GPP_nonover<-df_len5_nonnorm$df_noevent_dday
+Tmin_GPP_over<-df_GPP_over%>%
+               dplyr::select(sitename,classid,doy,temp_min_fluxnet2015)%>%
+               filter(doy<=181)%>%
+               group_by(sitename)%>%
+               dplyr::summarise(PFT=unique(classid),Tmin_over=mean(temp_min_fluxnet2015,na.rm=T))
+
+Tmin_GPP_nonover<-df_GPP_nonover%>%
+  dplyr::select(sitename,classid,doy,temp_min_fluxnet2015)%>%
+  filter(doy<=181)%>%
+  group_by(sitename)%>%
+  dplyr::summarise(PFT=unique(classid),Tmin_nonover=mean(temp_min_fluxnet2015,na.rm=T))
+Tmin_sum<-left_join(Tmin_GPP_over,Tmin_GPP_nonover)
+Tmin_sum %>%
+  mutate(Tmin_diff=Tmin_nonover - Tmin_over)%>%
+  group_by(PFT)%>%
+  dplyr::summarise(mean=mean(Tmin_diff,na.rm=T),sd=sd(Tmin_diff,na.rm = T))
 
 #-------------------------------------------------------------------------
 #(4)going to compare the "event" and "non-event" site with boxplot
@@ -402,7 +423,7 @@ save.path<-"./manuscript/figures/"
 p_SW_IN_Tmin<-plot_grid(p_SW_midday_mean_tmin_all,p_SW_midday_mean_tmin_DBF,
                         p_SW_midday_mean_tmin_MF,p_SW_midday_mean_tmin_ENF,
                         nrow = 2,ncol=2,labels = "auto",label_size = 20,align = "hv")
-ggsave(paste0(save.path,"Figure4_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 23,height = 19)
+ggsave(paste0(save.path,"Figure3_boxplot_SW_Tmin.png"),p_SW_IN_Tmin,width = 23,height = 19)
 #
 p_ppfd_Tmin<-plot_grid(p_ppfd_midday_mean_tmin_all,p_ppfd_midday_mean_tmin_DBF,
                         p_ppfd_midday_mean_tmin_MF,p_ppfd_midday_mean_tmin_ENF,

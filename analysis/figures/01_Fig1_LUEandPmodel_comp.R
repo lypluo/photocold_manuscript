@@ -12,6 +12,7 @@ library(lme4)
 library(tidyverse)
 # remotes::install_github("computationales/ingestr") #install the package
 library(ingestr)
+devtools::load_all("D:/Github/rbeni/")
 library(rbeni)
 
 #-----------------
@@ -228,7 +229,7 @@ plot_sites<-df_meandoy_norm %>%
   # theme_gray() +
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
     "gpp_pmodel" = "red","gpp_lmer"="dodgerblue"),
-    labels = c("Obervations","P-model","LUE-lme"))+
+    labels = c("Obervations","P-model","LME"))+
   # scale_color_manual(
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4")
@@ -318,7 +319,7 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
      "gpp_pmodel" = "red", "gpp_lmer" = "dodgerblue"),
-     labels = c("Observations","P-model","LUE-lme")) +
+     labels = c("Observations","P-model","LME")) +
   theme(
     legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),

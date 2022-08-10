@@ -93,7 +93,8 @@ p_plot1<-ggplot()+
   # geom_line(data=df_sel1,aes(x=x,y=y),size=1.1,col="tomato")+
   xlab(expression("T"[min]*"( °C )"))+
   ylab(expression(italic("f")[1]))+
-  ggtitle("Hardening")+
+  # ggtitle("Hardening")+
+  ggtitle("Phase 1")+
   theme_bw()+
   theme(axis.title = element_text(size = 18),
         axis.ticks.x = element_blank(),
@@ -117,7 +118,8 @@ p_plot2<-ggplot()+
   # geom_line(data=df_sel2,aes(x=x,y=y),size=1.1,col="forestgreen")+
   xlab(expression("GDD"*"( °C )"))+
   ylab(expression(italic("f")[2]))+
-  ggtitle("Dehardening")+
+  # ggtitle("Dehardening")+
+  ggtitle("Phase 2")+
   theme_bw()+
   theme(axis.title = element_text(size = 18),
         axis.ticks.x = element_blank(),

@@ -173,10 +173,10 @@ source(paste0(fun.path,"Difference_test_for_2Classes.R"))
 
 plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     # df<-df_len5_nonnorm
-    # comp_var<-"temp_min_fluxnet2015"
-    # var_unit<-"()"
+    # comp_var<-"gpp_obs"
+    # var_unit<-"(umol m-2 s-1)"
     # do_norm<-FALSE
-    # do_legend<-FALSE
+    # do_legend<-TRUE
 
     #
     df.event<-df$df_dday
@@ -232,8 +232,11 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     # x_range_event<-range(df.event_sel$doy)
     # x_range_nonevent<-range(df.nonevent_sel$doy)
     ###start to make the quantiile plot:
-    df.event_sel$flag<-rep("GPP overestimated sites",nrow(df.event_sel))
-    df.nonevent_sel$flag<-rep("GPP non-overestimated sites",nrow(df.nonevent_sel))
+    ##2022,Aug-->change the "GPP overestimated sites" to "SY_OSB", the other to "SY_ASB"
+    # df.event_sel$flag<-rep("GPP overestimated sites",nrow(df.event_sel))
+    # df.nonevent_sel$flag<-rep("GPP non-overestimated sites",nrow(df.nonevent_sel))
+    df.event_sel$flag<-rep("SY_OSB",nrow(df.event_sel))
+    df.nonevent_sel$flag<-rep("SY_ASB",nrow(df.nonevent_sel))
     #!one thing need to pay attention-->use q90 to limit the dday range in sites as the sites diff a lot
     #to ensure the results do not impact by one specific site
     dday_range_event<-ddply(df.event_sel,.(sitename),summarize,min_dday=min(dday),max_dday=max(dday))
@@ -245,7 +248,7 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     df.nonevent_sel<-df.nonevent_sel[df.nonevent_sel$dday<=sel_dday_nonevent,]
     ##merge and classify 
     df.all<-rbind(df.event_sel,df.nonevent_sel)
-    df.all$flag<-factor(df.all$flag,levels = c("GPP overestimated sites","GPP non-overestimated sites"))
+    df.all$flag<-factor(df.all$flag,levels = c("SY_OSB","SY_ASB"))
     ##
     #for min temperature-->first find the mininum temperature for each site then calculate the quantile
     if(comp_var=="temp_min_fluxnet2015"){
@@ -265,8 +268,8 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       # sel_perc<-1             #which period (percentage of the minimum days) used to compare between vars in two category
       # flag<-"all"
 
-      df_comp_event<-df_comp[df_comp$flag=="GPP overestimated sites",]
-      df_comp_nonevent<-df_comp[df_comp$flag=="GPP non-overestimated sites",]
+      df_comp_event<-df_comp[df_comp$flag=="SY_OSB",]
+      df_comp_nonevent<-df_comp[df_comp$flag=="SY_ASB",]
       #------
       #select the data
       #------
@@ -304,13 +307,14 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       #some changes here
       annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
       geom_line(aes(x=dday,y=q50,col=flag),size=1.05)+
-      scale_color_manual("",values = c("GPP overestimated sites"="red","GPP non-overestimated sites"="blue"))+
+      scale_color_manual("",values = c("SY_OSB"="red","SY_ASB"="blue"))+
       # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
       geom_ribbon(aes(x=dday,ymin=q25,ymax=q75,fill=flag),alpha=0.4)+
-      scale_fill_manual("",values = c("GPP overestimated sites"="red","GPP non-overestimated sites"="dodgerblue"))+
+      scale_fill_manual("",values = c("SY_OSB"="red","SY_ASB"="dodgerblue"))+
       ylab(paste0(comp_var," ",var_unit))+
       theme_classic()+
-      theme(legend.position = c(0.4,0.9),legend.background = element_blank(),
+      theme(legend.position = c(0.3,0.9),legend.background = element_blank(),
+            legend.key.size = unit(2, 'lines'),
             legend.text = element_text(size=20),
             axis.title = element_text(size=24),
             axis.text = element_text(size = 20))+
@@ -399,10 +403,10 @@ p_temp_min_len5_b60$plot<-p_temp_min_len5_b60$plot+
   ylim(-30,25)
 p_temp_day_len5_b60$plot<-p_temp_day_len5_b60$plot+
   ylab(expression("T"[mean]*" (°C)"))+
-  ylim(-30,25)
+  ylim(-20,25)
 p_temp_max_len5_b60$plot<-p_temp_max_len5_b60$plot+
   ylab(expression("T"[max]*" (°C)"))+
-  ylim(-30,25)
+  ylim(-20,25)
 p_prec_len5_b60$plot<-p_prec_len5_b60$plot+
   ylab("prec (mm)")
 p_vpd_day_len5_b60$plot<-p_vpd_day_len5_b60$plot+
@@ -511,20 +515,20 @@ p_merge_new<-plot_grid(
   labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
 # ggsave(paste0(save.path,"p_new_merged.png"),p_merge_new,width = 20,height = 13)
-#Figure 3:
+#Figure 2:
 p_merge_1<-plot_grid(
   p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
+  p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure2_ppfd_Tmin.png"),p_merge_1,width = 15,height = 8)
+ggsave(paste0(save.path,"Figure2_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,width = 15,height = 12)
 
 #Figure Sxx:
 p_merge_S<-plot_grid(
   p_temp_day_len5_b60$plot,p_temp_max_len5_b60$plot,
-  p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"FigureS_other_drivers.png"),p_merge_S,width = 15,height = 12)
+ggsave(paste0(save.path,"FigureS_other_drivers.png"),p_merge_S,width = 15,height = 8)
 
 #Figure Sxx-->fAPAR and fAPARcanopy->test
 p_merge_S_fAPAR<-plot_grid(

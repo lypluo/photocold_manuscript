@@ -4,7 +4,7 @@
 ##---------------------------------------
 library(dplyr)
 library(devtools)
-# devtools::load_all("D:/Github/rbeni/")
+devtools::load_all("D:/Github/rbeni/")
 # install_github("stineb/rbeni")
 library(rbeni) #-->make the evaluation plot
 library(tidyverse)
@@ -204,7 +204,7 @@ data_sel_final$PFT<-factor(data_sel_final$PFT,levels = c("DBF","MF","ENF"))
 data_sel_final$parameter<-factor(data_sel_final$parameter,levels = c("tau","X0","Smax"))
 
 ###plot part 1:
-my_labeller<-as_labeller(c(tau="tau",X0="X[0]",Smax="S[max]"),default = label_parsed) #change the label of facet
+my_labeller<-as_labeller(c(tau="tau~(day)",X0="X[0]~('°C')",Smax="S[max]~('°C')"),default = label_parsed) #change the label of facet
 para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],
                    aes(x=parameter,y=parameter_value,fill=PFT,col=PFT))+
   geom_point(position = position_jitterdodge())+
@@ -224,6 +224,16 @@ para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         strip.text.x = element_text(size = 22)) ##change the facet label size
+##add the a,b,c indicate the panels:
+dat_text<-data.frame(label=c("a","b","c"),parameter=c("tau","X0","Smax"),
+                     PFT=rep("DBF",3),
+                     x=rep(0.5,3),y=c(25,3,25))
+dat_text$parameter<-factor(dat_text$parameter,levels = c("tau","X0","Smax"))
+para_sites<-para_sites+geom_text(
+  data=dat_text,
+  size=6,col="black",
+  mapping = aes(x=x,y=y,label=label)
+)
 #change the color-blind friendly color==>refer the package colorspace
 #refer:https://stackoverflow.com/questions/57153428/r-plot-color-combinations-that-are-colorblind-accessible
 library(colorspace)
@@ -271,7 +281,7 @@ paras_boxplot<-tag_facet(para_sites,x=paras_PFTs_new$x,y=paras_PFTs_new$paramete
                            tag_pool = paras_PFTs_new$label,size=12,col=paras_PFTs_new$col)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_parameters_boxplot.png"),paras_boxplot)
+ggsave(paste0(save.path,"Figure5_parameters_boxplot.png"),paras_boxplot,height = 5,width = 8)
 
 ###plot part 2:
 #----------------scatter plot------------------

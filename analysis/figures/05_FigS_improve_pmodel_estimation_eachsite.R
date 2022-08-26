@@ -266,7 +266,7 @@ season_plot<-df_modobs %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
                                               "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+                     labels = c("Orig. P-model", "Accli. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   facet_wrap(~sitename)+

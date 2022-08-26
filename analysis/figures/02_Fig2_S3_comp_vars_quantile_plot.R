@@ -124,7 +124,7 @@ sep_siteyears_data<-function(df.data,dovars,df.sep,leng_threshold,before,after,n
 #do_vars-->the variables that are going to be processed:
 names(df_norm_all)
 do_vars<-c("gpp_obs","fapar_itpl","fapar_spl",paste0(c("ppfd","PPFD_IN_fullday_mean","temp_day","temp_min","temp_max",
-                                                       "vpd_day","prec","patm","SW_IN","ws",paste0("TS_",1:9),paste0("SWC_",1:5)),"_fluxnet2015"),
+                                                       "vpd_day","prec","patm","SW_IN","ws",paste0("TS_",1:7),paste0("SWC_",1:5)),"_fluxnet2015"),
            "gcc_90","rcc_90")
 #set the before events days from 30 days to 60 days
 df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep20,5,60,0,10,FALSE)
@@ -148,9 +148,18 @@ for(i in 1:length(df_len5_nonnorm)){
   df_proc$alpha_SW<-df_proc$SW_OUT_fullday_mean_fluxnet2015/df_proc$SW_IN_fullday_mean_fluxnet2015
   df_proc$alpha_PPFD<-df_proc$PPFD_OUT_fullday_mean_fluxnet2015/df_proc$PPFD_IN_fullday_mean_fluxnet2015
   df_proc$fAPAR_chl<-df_proc$evi*1
+  ##adding the mean values of soil mositure of first 3 layers:
+  df_proc$TS_top3_fluxnet2015<-rowMeans(df_proc[,c("TS_1_fluxnet2015",
+          "TS_2_fluxnet2015","TS_3_fluxnet2015")])
   #assign value back:
   df_len5_nonnorm[[i]]<-df_proc
 }
+#check the data aviablity for each variable:
+library(visdat)
+pos_TS<-grep("TS_",names(df_len5_nonnorm$df_dday))
+pos_SWC<-grep("SWC_",names(df_len5_nonnorm$df_dday))
+# visdat::vis_miss(df_len5_nonnorm$df_dday[,pos_TS], warn_large_data = FALSE)
+# visdat::vis_miss(df_len5_nonnorm$df_dday[,pos_SWC], warn_large_data = FALSE)
 #----calculate the mean T between "overestimated site" and "non-overestimated site"--
 #only using the data bebtween Jan and June:
 ##the code is in "photocold_manuscript/test/"
@@ -171,10 +180,13 @@ for(i in 1:length(df_len5_nonnorm)){
 fun.path<-"D:/Github/photocold_lyp/R/Step2_identify_events/Functions/functions_from_YP/"
 source(paste0(fun.path,"Difference_test_for_2Classes.R"))
 
+#
+plot(df_len5_nonnorm$df_dday$date,df_len5_nonnorm$df_dday$TS_1_fluxnet2015,
+     xlab = "Date",ylab="SY_PSB Tsoil(degC)")
 plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     # df<-df_len5_nonnorm
-    # comp_var<-"gpp_obs"
-    # var_unit<-"(umol m-2 s-1)"
+    # comp_var<-"TS_top3_fluxnet2015"
+    # var_unit<-"degC"
     # do_norm<-FALSE
     # do_legend<-TRUE
 
@@ -232,10 +244,10 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     # x_range_event<-range(df.event_sel$doy)
     # x_range_nonevent<-range(df.nonevent_sel$doy)
     ###start to make the quantiile plot:
-    ##2022,Aug-->change the "GPP overestimated sites" to "SY_OSB", the other to "SY_ASB"
+    ##2022,Aug-->change the "GPP overestimated sites" to "SY_PSB", the other to "SY_ASB"
     # df.event_sel$flag<-rep("GPP overestimated sites",nrow(df.event_sel))
     # df.nonevent_sel$flag<-rep("GPP non-overestimated sites",nrow(df.nonevent_sel))
-    df.event_sel$flag<-rep("SY_OSB",nrow(df.event_sel))
+    df.event_sel$flag<-rep("SY_PSB",nrow(df.event_sel))
     df.nonevent_sel$flag<-rep("SY_ASB",nrow(df.nonevent_sel))
     #!one thing need to pay attention-->use q90 to limit the dday range in sites as the sites diff a lot
     #to ensure the results do not impact by one specific site
@@ -248,7 +260,7 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     df.nonevent_sel<-df.nonevent_sel[df.nonevent_sel$dday<=sel_dday_nonevent,]
     ##merge and classify 
     df.all<-rbind(df.event_sel,df.nonevent_sel)
-    df.all$flag<-factor(df.all$flag,levels = c("SY_OSB","SY_ASB"))
+    df.all$flag<-factor(df.all$flag,levels = c("SY_PSB","SY_ASB"))
     ##
     #for min temperature-->first find the mininum temperature for each site then calculate the quantile
     if(comp_var=="temp_min_fluxnet2015"){
@@ -258,7 +270,7 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     }
     
     #merge the different sites in "event" and "non-event" sites->calculate the quantiles at the same time
-    df.all_q<-ddply(df.all,.(flag,dday),summarize,q10=quantile(comp_var,0.10,na.rm = T),q25=quantile(comp_var,0.25,na.rm = T),
+    df.all_q<-ddply(df.all,.(flag,dday),summarize,q10=quantile(comp_var,0.1,na.rm = T),q25=quantile(comp_var,0.25,na.rm = T),
           q50=quantile(comp_var,0.5,na.rm = T),q75=quantile(comp_var,0.75,na.rm = T),q90=quantile(comp_var,0.9,na.rm = T))
     #-----------------------
     #add a additional test-->to compare if the vars are significant different(q50) in two categories
@@ -268,7 +280,7 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       # sel_perc<-1             #which period (percentage of the minimum days) used to compare between vars in two category
       # flag<-"all"
 
-      df_comp_event<-df_comp[df_comp$flag=="SY_OSB",]
+      df_comp_event<-df_comp[df_comp$flag=="SY_PSB",]
       df_comp_nonevent<-df_comp[df_comp$flag=="SY_ASB",]
       #------
       #select the data
@@ -307,11 +319,12 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       #some changes here
       annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
       geom_line(aes(x=dday,y=q50,col=flag),size=1.05)+
-      scale_color_manual("",values = c("SY_OSB"="red","SY_ASB"="blue"))+
+      scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"))+
       # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
       geom_ribbon(aes(x=dday,ymin=q25,ymax=q75,fill=flag),alpha=0.4)+
-      scale_fill_manual("",values = c("SY_OSB"="red","SY_ASB"="dodgerblue"))+
+      scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"))+
       ylab(paste0(comp_var," ",var_unit))+
+      xlab("gday")+
       theme_classic()+
       theme(legend.position = c(0.3,0.9),legend.background = element_blank(),
             legend.key.size = unit(2, 'lines'),
@@ -370,7 +383,7 @@ p_gpp_biaes_len5_b60$plot<-p_gpp_biaes_len5_b60$plot+
   xlab("")+
   ylab(expression("GPP bias"*" (g "*"m"^-2*" d"^-1*")"))
 p_ppfd_len5_b60$plot<-p_ppfd_len5_b60$plot+
-  xlab("dday")+
+  # xlab("dday")+
   ylab(expression("PAR"*" (u mol "*"m"^-2*" s"^-1*")"))
 p_fapar_itpl_len5_b60$plot<-p_fapar_itpl_len5_b60$plot+
   xlab("")+
@@ -394,9 +407,13 @@ p_vpd_day_len5_b60<-plot_2groups(df_len5_nonnorm,"vpd_day_fluxnet2015","(Pa)",do
 p_SW_IN_len5_b60<-plot_2groups(df_len5_nonnorm,"SW_IN_fullday_mean_fluxnet2015","(W m-2)",do_norm = FALSE,FALSE)
 #TS_1-->first layer soil temperature
 p_TS_1_len5_b60<-plot_2groups(df_len5_nonnorm,"TS_1_fluxnet2015","(degreeC)",do_norm = FALSE,FALSE)
+#TS_top3-->mean of first 3 layers:
+p_TS_1_len5_b60<-plot_2groups(df_len5_nonnorm,"TS_1_fluxnet2015","(degreeC)",do_norm = FALSE,FALSE)
+p_TS_2_len5_b60<-plot_2groups(df_len5_nonnorm,"TS_2_fluxnet2015","(%)",do_norm = FALSE,FALSE)
+# p_TS_3_len5_b60<-plot_2groups(df_len5_nonnorm,"TS_3_fluxnet2015","(%)",do_norm = FALSE,FALSE)
+p_TS_top3_len5_b60<-plot_2groups(df_len5_nonnorm,"TS_top3_fluxnet2015","(%)",do_norm = FALSE,FALSE)
 #SWC_1-->first layer soil mosture
 p_SWC_1_len5_b60<-plot_2groups(df_len5_nonnorm,"SWC_1_fluxnet2015","(%)",do_norm = FALSE,FALSE)
-
 #some modifying in the plot:
 p_temp_min_len5_b60$plot<-p_temp_min_len5_b60$plot+
   ylab(expression("T"[min]*" (°C)"))+
@@ -414,6 +431,8 @@ p_vpd_day_len5_b60$plot<-p_vpd_day_len5_b60$plot+
 p_SW_IN_len5_b60$plot<-p_SW_IN_len5_b60$plot+
   ylab(expression("SW_IN"*" (W"*" m"^-2*")"))
 p_TS_1_len5_b60$plot<-p_TS_1_len5_b60$plot+
+  ylab(expression("T"[soil]*" (°C)"))
+p_TS_top3_len5_b60$plot<-p_TS_top3_len5_b60$plot+
   ylab(expression("T"[soil]*" (°C)"))
 p_SWC_1_len5_b60$plot<-p_SWC_1_len5_b60$plot+
   ylab("SWC (%)")
@@ -516,6 +535,8 @@ p_merge_new<-plot_grid(
 )
 # ggsave(paste0(save.path,"p_new_merged.png"),p_merge_new,width = 20,height = 13)
 #Figure 2:
+#need to note-->we only use the first layer Tsoil-->
+#if all the layer Tsoil are available, the results might be different
 p_merge_1<-plot_grid(
   p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
   p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,

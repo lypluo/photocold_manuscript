@@ -1,5 +1,5 @@
 ##---------------------------------------
-#Aim: To add barplots on the map to indicate different springtime bias 
+#Aim: To add barplots/different colors on the map to indicate different springtime bias 
 #in different site years
 ##---------------------------------------
 library(ggplot2)
@@ -16,7 +16,7 @@ library(rworldxtra)
 library(colorRamps)
 library(graphics)
 library(jpeg)
-#(1)load the map 
+#I.load the map 
 data(coastsCoarse)
 #prepration for map
 # newmap <- getMap(resolution = "high")[getMap()$ADMIN!='Antarctica',]
@@ -73,8 +73,26 @@ event_merge<-t_merge%>%
 #merge the datasets
 final_coord_sites<-left_join(final_coord_sites,event_merge)
 
+#(4)load the GPP data(has been characterized as
+#"overestimated" or "non-overestimated")
+load.path<-"./data/data_used/"
+#from new method:
+load(paste0(load.path,"ddf_labeled_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
+df_all_sites<-ddf_labeled;rm(ddf_labeled) 
+#select the needed variables 
+df_GPP<-df_all_sites%>%
+  select(sitename,date,doy,greenup,gpp_obs,gpp_mod_FULL,gpp_res)%>%
+  filter(greenup=="yes")%>% ##selecting the green-up period data
+  group_by(sitename)%>%
+  dplyr::summarise(gpp_obs_GP=mean(gpp_obs,na.rm=T),
+         gpp_mod_GP=mean(gpp_mod_FULL,na.rm=T),
+         gpp_bias=mean(c(gpp_mod_GP - gpp_obs_GP),na.rm=T)
+         )   #GP:for green-up period
+##merge the data:
+final_coord_sites<-left_join(final_coord_sites,df_GPP)
+
 #---------------------------------------------
-#(2)plotting
+#II.plotting
 #---------------------------------------------
 library(RColorBrewer)
 library(grDevices)
@@ -149,6 +167,7 @@ library(ggrepel)  #add the site labels
 barwidth = 1.5
 barheight = 2
 
+#figure format 1:barplot-->
 p_final<-gg+
   # geom_point(data=final_coord_sites,aes(x=lon,y=lat,shape=PFT,col=event_perc),size=4,pch=16)+
     geom_rect(data = final_coord_sites,
@@ -179,3 +198,28 @@ save.path<-"./manuscript/figures/"
 ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_barplots.png"),
        p_final,dev="png",width = 12,height=7)
 
+#figure format 2:color for different bias-->
+p_final<-gg+
+  geom_point(data=final_coord_sites,aes(x=lon,y=lat,col=gpp_bias),size=4,pch=16)+
+    scale_color_gradientn("GPP bias",
+    colours = c("red", "white", "blue"),
+    values = c(0, 0.5, 1))
+  # scale_fill_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  # geom_point(data=final_coord_sites%>% filter(event_perc==0),
+  #            aes(x=lon,y=lat),size=2,pch=16,col="black")+
+  # geom_text(data = final_coord_sites %>% filter(sitename=="DK-Sor"),
+  #           aes(x = lon+8,
+  #               y = lat + 0.1*event_perc*barheight,
+  #               label = paste0(event_perc*100," %")
+  #           ),
+  #           size = 3,col="orange")+ #only indicate the sites identified with non-overestimation(0%)
+  # geom_label_repel(data=final_coord_sites,
+  #                  aes(x=lon,y=lat,label = sitename),col="blue",
+  #                  label_size=NA,alpha=0.8,label.padding = .1,
+  #                  max.overlaps = 50,label.size = 0.1,
+  #                  arrow = arrow(ends = "first",length = unit(0.05,"inch")),
+  #                  size = 2.8)
+#save the plots
+save.path<-"./manuscript/figures/"
+ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_colored_bias.png"),
+       p_final,dev="png",width = 12,height=7)

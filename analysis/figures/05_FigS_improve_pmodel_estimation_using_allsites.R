@@ -229,7 +229,7 @@ season_plot<-df_final_new %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
                                               "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+                     labels = c("Orig. P-model", "Accli. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   theme(
@@ -330,7 +330,7 @@ season_plot<-df_modobs %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
                                               "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+                     labels = c("Orig. P-model", "Accli. P-model","Observations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   facet_wrap(~sitename)+
@@ -349,8 +349,8 @@ season_plot<-df_modobs %>%
 
 ####
 #save the plot
-# save.path<-"./manuscript/figures/"
-# ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_1set_parameter_new.png"),season_plot,width = 20,height = 20)
+save.path<-"./manuscript/figures/"
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_1set_parameter_new.png"),season_plot,width = 20,height = 20)
 
 #--------
 #5b.for Clim-PFTs
@@ -409,7 +409,7 @@ season_plot<-df_modobs %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
                                               "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Obseravations")) +
+                     labels = c("Orig. P-model", "Accli. P-model","Obseravations")) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # annotate(geom="text",x=200,y=2,label="")+

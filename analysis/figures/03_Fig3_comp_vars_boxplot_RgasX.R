@@ -205,14 +205,14 @@ Classify_Nbins_andPlot<-function(df,class_dday_range,class_var,N,do_manual_class
   df.event<-df$df_dday
   df.noevent<-df$df_noevent_dday
   #merge df.event and df.noevent
-  ##2022,Aug-->change the "GPP overestimated sites" to "SY_OSB", the other to "SY_ASB"
+  ##2022,Aug-->change the "GPP overestimated sites" to "SY_PSB", the other to "SY_ASB"
   # df.event$year_flag<-rep("GPP overestimated sites",nrow(df.event))
   # df.noevent$year_flag<-rep("GPP non-overestimated sites",nrow(df.noevent))
-  df.event$year_flag<-rep("SY_OSB",nrow(df.event))
+  df.event$year_flag<-rep("SY_PSB",nrow(df.event))
   df.noevent$year_flag<-rep("SY_ASB",nrow(df.noevent))
   #
   df.all<-rbind(df.event,df.noevent)
-  df.all$year_flag<-factor(df.all$year_flag,levels = c("SY_OSB","SY_ASB"))
+  df.all$year_flag<-factor(df.all$year_flag,levels = c("SY_PSB","SY_ASB"))
   #only select the data dday between -60 to 70:
   df.all<-df.all[df.all$dday>=class_dday_range[1] & df.all$dday<=class_dday_range[2],]
   #only targeting on one specific PFT
@@ -270,7 +270,7 @@ comp_boxplot<-function(df,comp_yvar,do_legend,end_xylab,PFT_name){
   p_plot_main<-ggplot(df.tidy,aes(x = inbin, y = comp_vary,fill=year_flag))+
     geom_boxplot()+
     # annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+  #
-    scale_fill_manual("",values = c("SY_OSB"=adjustcolor("tomato",1),
+    scale_fill_manual("",values = c("SY_PSB"=adjustcolor("tomato",1),
                     "SY_ASB"=adjustcolor("dodgerblue",1)))+
     geom_hline(yintercept = 0,linetype="dotted",size=1.1)+
     theme_classic()+

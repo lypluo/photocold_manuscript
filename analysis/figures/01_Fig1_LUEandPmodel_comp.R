@@ -57,6 +57,8 @@ ddf <- ddf %>%
   #the variables of ppfd_fluxnet2015 has some probelm==> using PPFD_IN_fullday_mean_fluxnet2015
   mutate(lue = gpp_obs / (fapar_itpl * PPFD_IN_fullday_mean_fluxnet2015)) %>% 
   mutate(lue = remove_outliers(lue)) #using the functions in the ingestr
+#save the ddf-->using for further analysis in the future
+# save(ddf,file = paste0("D:/Github/photocold_manuscript/test/test_dataset/","GPP_andLUE.RDA"))
 
 #check the data for each site:
 ddf %>%

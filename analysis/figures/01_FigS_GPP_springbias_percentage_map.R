@@ -159,7 +159,9 @@ gg <- ggplot() +
   scale_x_continuous(expand = c(0,0), limits = c(-1+lonmin,lonmax+1), breaks = lon.labels, labels = b) +
   scale_y_continuous(expand = c(0,0), limits = c(-1+latmin,latmax+1), breaks = lat.labels, labels = a) +
   labs( x = "longtitude", y = "latitude")
-
+##update in 2022,Oct-->using Beni' code to create a empty global map
+source("./R/functions_from_beni/plot_map_simpl.R")
+gg<-plot_map_simpl(-180,180,30,90)
 #---------------------------------------------
 # 2. add sites information
 #---------------------------------------------

@@ -149,18 +149,18 @@ latmax=90
 #something need to be paid attention-->to make sure the plot looks right
 #-->should set latmin=-90; latmax=90
 #-->and also leave some place for latitude and longtitude-->set the limits in scale_x/y_continous adding or minus some numbers
-gg <- ggplot() +
-  theme_map+
-  # background countries
-  # geom_polygon(data=newmap, aes(long, lat, group=group), color=NA, fill='grey75') +
-  # Coastline
-  geom_path(data=coastsCoarse, aes(long, lat, group=group), color='black',size=1.02) +
-  # 
-  scale_x_continuous(expand = c(0,0), limits = c(-1+lonmin,lonmax+1), breaks = lon.labels, labels = b) +
-  scale_y_continuous(expand = c(0,0), limits = c(-1+latmin,latmax+1), breaks = lat.labels, labels = a) +
-  labs( x = "longtitude", y = "latitude")
-##update in 2022,Oct-->using Beni' code to create a empty global map
-source("./R/functions_from_beni/plot_map_simpl.R")
+# gg <- ggplot() +
+#   theme_map+
+#   # background countries
+#   # geom_polygon(data=newmap, aes(long, lat, group=group), color=NA, fill='grey75') +
+#   # Coastline
+#   geom_path(data=coastsCoarse, aes(long, lat, group=group), color='black',size=1.02) +
+#   # 
+#   scale_x_continuous(expand = c(0,0), limits = c(-1+lonmin,lonmax+1), breaks = lon.labels, labels = b) +
+#   scale_y_continuous(expand = c(0,0), limits = c(-1+latmin,latmax+1), breaks = lat.labels, labels = a) +
+#   labs( x = "longtitude", y = "latitude")
+##update in 2022,Oct-->using Beni' code (but revised it) to create a empty global map
+source("./R/plot_map_simpl_rev_YP.R")
 gg<-plot_map_simpl(-180,180,30,90)
 #---------------------------------------------
 # 2. add sites information
@@ -196,15 +196,15 @@ p_final<-gg+
                    arrow = arrow(ends = "first",length = unit(0.05,"inch")),
                    size = 2.8)
 #save the plots
-save.path<-"./manuscript/figures/"
-ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_barplots.png"),
-       p_final,dev="png",width = 12,height=7)
+# save.path<-"./manuscript/figures/"
+# ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_barplots.png"),
+#        p_final,dev="png",width = 12,height=7)
 
 #figure format 2:color for different bias-->
 p_final<-gg+
   geom_point(data=final_coord_sites,aes(x=lon,y=lat,col=gpp_bias),size=4,pch=16)+
     scale_color_gradientn("GPP bias",
-    colours = c("red", "white", "blue"),
+    colours = c("blue", "white", "red"),
     values = c(0, 0.5, 1))
   # scale_fill_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   # geom_point(data=final_coord_sites%>% filter(event_perc==0),

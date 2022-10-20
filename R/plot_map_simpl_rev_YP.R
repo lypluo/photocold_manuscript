@@ -1,5 +1,5 @@
 # map plot function adopt from "rbeni"(https://github.com/stineb/rbeni/blob/master/R/plot_map_simpl.R) 
-#-->but really does not work!!!-->because the unit of degree is square rather than circle
+#-->and revised by Yunpeng:updated in 2022-Oct
 #' Empty global map
 #'
 #' Returns a ggplot object for an empty global map
@@ -29,10 +29,10 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 8
   
   # create a bounding box for the robinson projection
   bb <- sf::st_union(sf::st_make_grid(
-    st_bbox(c(xmin = -180,
-              xmax = 180,
-              ymax = 90,
-              ymin = 30),
+    st_bbox(c(xmin = lonmin,
+              xmax = lonmax,
+              ymax = latmax,
+              ymin = latmin),
             crs = st_crs(4326)),
     n = c(12,6)))
   # bb_robinson <- st_transform(bb, as.character(robinson))
@@ -70,32 +70,26 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 8
   ## Create ggplot object
   ##---------------------------------------------
   #update in October, 2022 by Yunpeng
-  lat.labels <- seq(30, 90, 30)
-  lat.short  <- seq(30, 90, 10)
-  lon.labels <- seq(-180, 180, 60)
-  lon.short  <- seq(-180, 180, 10)
-
-  # a<-expression("30°" ~ N,"40°" ~ N,"50°" ~ N,
-  #               "60°" ~ N,"70°" ~ N,"80°" ~ N,"90°" ~ N)
-  # a<-expression("30°" ~ N,"60°" ~ N,"90°" ~ N)
-  # b<-expression("180°"  ~ W, "120°" ~ W, "60°" ~ W,"0°",
-  #               "60°" ~ E, "120°" ~ E, "180°" ~ E)
-  
-  # lat.labels <- seq(30, 90, 30)
-  # lon.labels <- seq(-180, 180, 60)
-  # a<-c("30° N","60° N" ,"90° N")
-  # b<-c("180° W","120° W", "60° W","0°","60° E","120° E","180° E")
   # create the breaks- and label vectors
-  ewbrks <- seq(-180, 180, 60)
-  nsbrks <- seq(30,90,30)
+  #update in March, 2022
+  a<-expression("30°" ~ N, "60°" ~ N, "90°" ~ N)
+  b<-expression("30°"  ~ W, "120°" ~ W, "60°" ~ W,"0°",
+                "60°" ~ E, "120°" ~ E, "180°" ~ E)
+  
+  ewbrks <- seq(-120, 120, 60)
+  nsbrks <- seq(45,75,15)
   ewlbls <- unlist(lapply(ewbrks, function(x) ifelse(x < 0, paste(-x, "°W"), ifelse(x > 0, paste(x, "°E"),x))))
   nslbls <- unlist(lapply(nsbrks, function(x) ifelse(x < 0, paste(-x, "°S"), ifelse(x > 0, paste(x, "°N"),x))))
+  #find out the reason why I cannot add the maually label(long./lat.) into x and y axis
+  #-->because the breaks cannot surpass the data range boundary-->for instance:
+  #for range(-180,180), the breaks cannot be -180, and 180...
   
   #
   # sf_use_s2(FALSE)
   gg <- ggplot() +
     # background countries
-    # geom_sf(data = countries, color="black", fill='grey75', size = 0.1) +
+    geom_sf(data = countries, color="black", fill='grey75', size = 0.1) +
+    # geom_path(data=coastsCoarse, aes(long, lat, group=group), color='black',size=1.02)
     geom_sf(data = countries,
             colour = 'black',
             fill = 'grey75',  # NA for empty
@@ -111,14 +105,22 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 8
     # coord_sf(
     #   ylim = c(-60, 90)
     # ) +
-    # scale_x_continuous(expand = c(0, 0)) +  #all those ways to add the labels dose not work
-    # scale_y_continuous(expand = c(0, 0)) +
+    #manually add it-->!!and also the break should not in the boundary, 
+    #for instance:breaks cannot include -180 and 180 of longtitude
+    scale_x_continuous(expand = c(0, 0),limits = c(-180,180),
+                       breaks =ewbrks,
+                       labels = ewlbls)+
+    scale_y_continuous(expand = c(0, 0),limits = c(30,90),
+                       breaks =nsbrks,
+                       labels = nslbls)+
+    # scale_x_continuous(expand = c(0, 0),limits = c(-180,180),
+    #                    breaks =c(-120,-60,0,60,120),
+    #                    labels = c("120° W","60° W","0","60° E","120° E"))+  
+    # scale_y_continuous(expand = c(0, 0),limits = c(30,90),
+    #                    breaks =c(45,60,75),
+    #                    labels = c("45° N","60° N","75° N"))+  
     # scale_x_continuous(expand = c(0, 0),breaks = ewbrks,labels = ewlbls) +
     # scale_y_continuous(expand = c(0, 0),breaks = nsbrks,labels = nslbls) +
-    # scale_x_continuous(expand = c(0, 0), limits = c(-1+lonmin,lonmax+1),
-    #                    breaks = lon.labels, labels = b) +
-    # scale_y_continuous(expand = c(0, 0), limits = c(-1+latmin, latmax+1),
-    #                    breaks = lat.labels, labels = a) +
     labs( x = "longtitude", y = "latitude")+
     theme_bw()
   # theme(axis.ticks.y.right = element_line(),

@@ -50,15 +50,15 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 8
   theme_map <- theme_grey() +    # theme_minimal()
     theme(
       
-      plot.title = element_text(hjust = 0, face="bold", size = 18),
+      plot.title = element_text(hjust = 0, face="bold", size = 24),
       
       legend.position = "right", # c(0.07, 0.35), #"left"
       # legend.key.size = unit(c(5, 1), "mm"),
-      legend.title=element_text(size=12),
-      legend.text=element_text(size=10),
+      legend.title=element_text(size=24),
+      legend.text=element_text(size=20),
       
       # axis.line = element_blank(),
-      # axis.text = element_blank(),
+      axis.text = element_text(size = 20),
       # axis.title = element_blank(),
       
       # panel.grid.major = element_blank(),
@@ -122,7 +122,9 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 8
     # scale_x_continuous(expand = c(0, 0),breaks = ewbrks,labels = ewlbls) +
     # scale_y_continuous(expand = c(0, 0),breaks = nsbrks,labels = nslbls) +
     labs( x = "longtitude", y = "latitude")+
-    theme_bw()
+    theme_bw()+
+    theme(axis.text = element_text(size=16),
+          axis.title = element_text(size=18))
   # theme(axis.ticks.y.right = element_line(),
   #       axis.ticks.x.top = element_line(),
   #       panel.grid = element_blank())

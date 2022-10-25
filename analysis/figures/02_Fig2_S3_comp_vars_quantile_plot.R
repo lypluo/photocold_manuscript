@@ -185,7 +185,7 @@ plot(df_len5_nonnorm$df_dday$date,df_len5_nonnorm$df_dday$TS_1_fluxnet2015,
      xlab = "Date",ylab="SY_PSB Tsoil(degC)")
 plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     # df<-df_len5_nonnorm
-    # comp_var<-"TS_top3_fluxnet2015"
+    # comp_var<-"gpp_obs"
     # var_unit<-"degC"
     # do_norm<-FALSE
     # do_legend<-TRUE
@@ -319,10 +319,12 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       #some changes here
       annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
       geom_line(aes(x=dday,y=q50,col=flag),size=1.05)+
-      scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"))+
+      scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"),
+                         labels=c(expression(SY[DSPR]),expression(SY[0])))+ ##add subscript in the legend
       # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
       geom_ribbon(aes(x=dday,ymin=q25,ymax=q75,fill=flag),alpha=0.4)+
-      scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"))+
+      scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"),
+                        labels=c(expression(SY[DSPR]),expression(SY[0])))+
       ylab(paste0(comp_var," ",var_unit))+
       xlab("gday")+
       theme_classic()+
@@ -331,7 +333,9 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
             legend.text = element_text(size=20),
             axis.title = element_text(size=24),
             axis.text = element_text(size = 20))+
+      theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
       xlim(-60,70)  #add x range in 2021-09-25
+      
     #legend
     if(do_legend==FALSE){
     p_plot<-p_plot+

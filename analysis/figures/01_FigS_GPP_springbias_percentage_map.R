@@ -203,9 +203,11 @@ p_final<-gg+
 #figure format 2:color for different bias-->
 p_final<-gg+
   geom_point(data=final_coord_sites,aes(x=lon,y=lat,col=gpp_bias),size=4,pch=16)+
-    scale_color_gradientn("GPP bias",
+    scale_color_gradientn(expression ("GPP bias (g m"^-2*"d"^-1*")"),
     colours = c("blue", "white", "red"),
-    values = c(0, 0.5, 1))
+    values = c(0, 0.5, 1))+
+    theme(legend.title = element_text(size=16),
+          legend.text = element_text(size=12))
   # scale_fill_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   # geom_point(data=final_coord_sites%>% filter(event_perc==0),
   #            aes(x=lon,y=lat),size=2,pch=16,col="black")+

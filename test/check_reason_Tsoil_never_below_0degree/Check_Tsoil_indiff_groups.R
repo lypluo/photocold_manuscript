@@ -141,6 +141,7 @@ df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep20,5,60,0,10,FALSE
 #3)albedo:alpha_SW<-SW_OUT/SW_IN; alpha_ppdf<-PPFD_IN/PPFD_OUT
 #4)approximated fAPARchl=EVI*factor(factor = 1)
 #check the data aviablity for each variable:
+library(lubridate)
 library(visdat)
 #for overestimated sites and years
 pos_TS<-grep("TS_",names(df_len5_nonnorm$df_dday))
@@ -170,14 +171,14 @@ for(i in 1:length(df_len5_nonnorm)){
   df_len5_nonnorm[[i]]<-df_proc
 }
 #a1.checking the general distribution of Tsoil 
-par(mfrow=c(2,1),fig=c(0,1,0.4,1))
-plot(df_len5_nonnorm$df_dday$date,df_len5_nonnorm$df_dday$TS_1_fluxnet2015,
-     xlab = "",ylab="SY_PSB Tsoil(degC)",xaxt="n")
-abline(h=0,lty=2,col="blue")
-par(fig=c(0,1,0,0.6),new=T)
-plot(df_len5_nonnorm$df_noevent_dday$date,df_len5_nonnorm$df_noevent_dday$TS_1_fluxnet2015,
-     xlab = "Date",ylab="SY_ASB Tsoil(degC)")
-abline(h=0,lty=2,col="blue")
+# par(mfrow=c(2,1),fig=c(0,1,0.4,1))
+# plot(df_len5_nonnorm$df_dday$date,df_len5_nonnorm$df_dday$TS_1_fluxnet2015,
+#      xlab = "",ylab="SY_PSB Tsoil(degC)",xaxt="n")
+# abline(h=0,lty=2,col="blue")
+# par(fig=c(0,1,0,0.6),new=T)
+# plot(df_len5_nonnorm$df_noevent_dday$date,df_len5_nonnorm$df_noevent_dday$TS_1_fluxnet2015,
+#      xlab = "Date",ylab="SY_ASB Tsoil(degC)")
+# abline(h=0,lty=2,col="blue")
 #a2.check the missing Tsoil sites
 #take out the TS from two classes and aggregate them:
 df1<-df_len5_nonnorm[["df_dday"]] %>%
@@ -202,26 +203,43 @@ print(c(N1,N2))
 
 #a3.merge df1 and df2 and plotting
 df.merge_soil<-rbind(df1,df2)
-#plot 1:
-df.merge_soil %>%
+library(plotly) #plot interactive plots
+library(htmlwidgets) #save the plot to html files
+#plot 1:general distribution of Tsoil 
+plot1<-df.merge_soil %>%
   group_by(flag)%>%
   ggplot(aes(x=date,y=TS_1_fluxnet2015,col=sitename))+
   geom_point()+
   geom_hline(yintercept = 0,col="blue",lty=2)+
   facet_wrap(flag~.,nrow = 2)
+plot1_dynamic<-ggplotly(plot1)
+#save the plot
+# save.path<-"./test/check_reason_Tsoil_never_below_0degree/Figures/"
+# htmlwidgets::saveWidget(
+#   widget = plot1_dynamic, #the plotly object
+#   file = paste0(save.path,"Tsoil_general_distributon.html"), #the path & file name
+#   selfcontained = TRUE #creates a single html file
+# )
 #plot 2:
-df.merge_soil %>%
-  group_by(flag)%>%
-  ggplot(aes(x=date,y=TS_1_fluxnet2015,col=month))+
+plot2<-df.merge_soil %>%
+  mutate(doy=yday(date))%>%
+  group_by(sitename)%>%
+  ggplot(aes(x=doy,y=TS_1_fluxnet2015,col=flag))+
   geom_point()+
+  xlim(0,200)+
   geom_hline(yintercept = 0,col="blue",lty=2)+
-  scale_color_viridis_b()+
-  facet_wrap(flag~.,nrow = 2)
+  # scale_color_viridis_b()+
+  facet_wrap(.~sitename,nrow = 2)
+plot2_dynamic<-ggplotly(plot2)
+htmlwidgets::saveWidget(
+  widget = plot2_dynamic, #the plotly object
+  file = paste0(save.path,"Tsoil_vary_doy_eachsite.html"), #the path & file name
+  selfcontained = TRUE #creates a single html file
+)
 
 #----calculate the mean T between "overestimated site" and "non-overestimated site"--
 #only using the data bebtween Jan and June:
 ##the code is in "photocold_manuscript/test/"
-
 
 #-------------------------------------------------------------------------
 #(4)going to compare the "event" and "non-event" site

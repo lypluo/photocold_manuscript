@@ -181,8 +181,8 @@ fun.path<-"D:/Github/photocold_lyp/R/Step2_identify_events/Functions/functions_f
 source(paste0(fun.path,"Difference_test_for_2Classes.R"))
 
 #
-plot(df_len5_nonnorm$df_dday$date,df_len5_nonnorm$df_dday$TS_1_fluxnet2015,
-     xlab = "Date",ylab="SY_PSB Tsoil(degC)")
+# plot(df_len5_nonnorm$df_dday$date,df_len5_nonnorm$df_dday$TS_1_fluxnet2015,
+#      xlab = "Date",ylab="SY_PSB Tsoil(degC)")
 plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     # df<-df_len5_nonnorm
     # comp_var<-"gpp_obs"
@@ -538,7 +538,7 @@ p_merge_new<-plot_grid(
   labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
 # ggsave(paste0(save.path,"p_new_merged.png"),p_merge_new,width = 20,height = 13)
-#Figure 2:
+#Figure 3:
 #need to note-->we only use the first layer Tsoil-->
 #if all the layer Tsoil are available, the results might be different
 p_merge_1<-plot_grid(
@@ -546,7 +546,7 @@ p_merge_1<-plot_grid(
   p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure2_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,width = 15,height = 12)
+ggsave(paste0(save.path,"Figure3_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,width = 15,height = 12)
 
 #Figure Sxx:
 p_merge_S<-plot_grid(

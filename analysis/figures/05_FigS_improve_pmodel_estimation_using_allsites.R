@@ -170,7 +170,7 @@ names(par_Clim_PFTs)<-Clim.PFTs
 
 df_final<-c()
 for (i in 1:length(Clim.PFTs)) {
-  df_sel<-df_recent %>%
+  df_sel<-df_recent.new %>%
     dplyr::filter(Clim_PFTs==Clim.PFTs[i])
 
   scaling_factors <- df_sel %>%

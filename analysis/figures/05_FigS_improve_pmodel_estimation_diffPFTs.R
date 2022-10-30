@@ -207,7 +207,7 @@ load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_P
 #a.get the stress factor(calibration factor) for each PFT
 df_final<-c()
 for (i in 1:length(PFTs)) {
-  df_sel<-df_merge.new %>%
+  df_sel<-df_merge_new %>%
     dplyr::filter(classid==PFTs[i])
 
   scaling_factors <- df_sel %>%

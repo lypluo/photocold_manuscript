@@ -232,7 +232,8 @@ plot_sites<-df_meandoy_norm %>%
   # theme_gray() +
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
     "gpp_pmodel" = "red","gpp_lmer"="dodgerblue"),
-    labels = c("Obervations","P-model","LME"))+
+    labels = c(expression(GPP[obs]),expression(GPP[Pmodel]),expression(GPP[LME])))+
+    # labels = c("Obervations","P-model","LME"))+
   # scale_color_manual(
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4")
@@ -248,8 +249,8 @@ plot_sites<-df_meandoy_norm %>%
     panel.background = element_rect(colour ="grey",fill="white"),
     # legend.background = element_blank(),
     legend.position = c(0.75,0.05)
-  )
-
+  )+
+theme(legend.text.align = 0)  #align the legend (all the letter start at the same positoin)
 # ggsave("./manuscript/test_files/gpp_meandoy_norm.pdf", height = 25, width = 8)
 ggsave("./manuscript/figures/FigS_eachsite_gpp_meandoy_norm.png",width = 20,height = 20)
 
@@ -322,7 +323,8 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
      "gpp_pmodel" = "red", "gpp_lmer" = "dodgerblue"),
-     labels = c("Observations","P-model","LME")) +
+     labels = c(expression(GPP[obs]),expression(GPP[Pmodel]),expression(GPP[LME])))+
+     # labels = c("Observations","P-model","LME")) +
   theme(
     legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
@@ -334,5 +336,7 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
     panel.background = element_rect(colour ="grey",fill="white"),
     # legend.background = element_blank(),
     legend.position = c(0.75,0.1)
-  )
+  )+
+theme(legend.text.align = 0)  #align the legend (all the letter start at the same positoin)
+
 ggsave("./manuscript/figures/Figure1_gpp_meandoy_norm_forClimPFTs.png",plot_final,width = 15,height = 10)

@@ -256,10 +256,10 @@ df_merge_Allsiteslevel<-left_join(df_final_Allsiteslevel_new,df_old,by = c("site
 #using modelled and observed gpp to make the plots
 #-------------------------
 library(cowplot)
+
 ###############################
-#----a.making scatter plots:
+#---a.making scatter plots:evaluation for all sites (GPP_obs vs GPP_adj(with optimized paras))
 ###############################
-#!!this part needs to write a new function to plot the scatter plots:
 #for the site-level comparision(pooled all sites for this scatter plot):
 df_modobs_sitelevel<-df_merge_sitelevel%>%
   select(sitename,date,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim)%>%
@@ -298,18 +298,128 @@ df_modobs_Allsiteslevel<-df_merge_Allsiteslevel%>%
 #
 plot_gpp_modobs_Allsiteslevel<-df_modobs_Allsiteslevel %>%
   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
+##additional-->calculate the stats
+library(sirad)
+stats_sitelevel_allsitespooled<-round(unlist(modeval(df_merge_sitelevel$gpp_mod_recent_optim,
+      df_merge_sitelevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
+stats_PFTlevel_allsitespooled<-round(unlist(modeval(df_merge_PFTlevel$gpp_mod_recent_optim,
+      df_merge_PFTlevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
+stats_Allsitelevel_allsitespooled<-round(unlist(modeval(df_merge_Allsiteslevel$gpp_mod_recent_optim,
+      df_merge_Allsiteslevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
 
+#---
+#change x,y axis labels
+#---
+plot.theme<-theme(
+  legend.text = element_text(size=20),
+  axis.title = element_text(size=24),
+  axis.text = element_text(size = 20),
+  text = element_text(size=24)
+)
+plot_gpp_modobs_sitelevel$gg<-plot_gpp_modobs_sitelevel$gg+
+  # xlab("")+
+  ylab("")+
+  xlab(expression("GPP"[adj]*" (g C m"^-2*"d"^-1*")"))+
+  ylab(expression("GPP"[obs]*" (g C m"^-2*"d"^-1*")"))+
+  xlim(0,25)+ylim(-5,25)+
+  annotate(geom="text",x=20,y=0,label="site-specific paras",size=6)+
+  plot.theme
+plot_gpp_modobs_PFTlevel$gg<-plot_gpp_modobs_PFTlevel$gg+
+  # xlab("")+
+  xlab(expression("GPP"[adj]*" (g C m"^-2*"d"^-1*")"))+
+  ylab(expression("GPP"[obs]*" (g C m"^-2*"d"^-1*")"))+
+  xlim(0,25)+ylim(-5,25)+
+  annotate(geom="text",x=20,y=0,label="PFT-specific paras",size=6)+
+  plot.theme
+plot_gpp_modobs_Allsiteslevel$gg<-plot_gpp_modobs_Allsiteslevel$gg+
+  xlab("")+
+  ylab("")+
+  xlab(expression("GPP"[adj]*" (g C m"^-2*"d"^-1*")"))+
+  ylab(expression("GPP"[obs]*" (g C m"^-2*"d"^-1*")"))+
+  xlim(0,25)+ylim(-5,25)+
+  annotate(geom="text",x=20,y=0,label="One general paras",size=6)+
+  plot.theme
 
-#!!this part needs to write a new function to plot the scatter plots:
 #merge the plots
 evaulation_merge_plot<-plot_grid(plot_gpp_modobs_sitelevel$gg,
        plot_gpp_modobs_PFTlevel$gg,plot_gpp_modobs_Allsiteslevel$gg,
        widths=15,heights=4,
        labels = "auto",ncol =3,nrow = 1,label_size = 12,align = "hv")
-plot(evaulation_merge_plot)
+evaulation_merge_plot
 
+###############################
+#---b.RMSE and R2 for eval performance (display for different scales)
+###############################
+library(sirad)
+#function#
+stat_fun<-function(df,paras_level){
+  # df<-df_merge_sitelevel
+  # paras_level<-"site"
+  # 
+  df.stat<-df %>%
+    select(sitename,date,Clim_PFTs,gpp_mod_recent_optim,gpp_obs_recent)%>%
+    dplyr::mutate(gpp_adj=gpp_mod_recent_optim,gpp_mod_recent_optim=NULL,
+                  gpp_obs=gpp_obs_recent,gpp_obs_recent=NULL)%>%
+    group_by(Clim_PFTs)%>%
+    dplyr::summarise(N=as.numeric(unlist(modeval(gpp_adj,gpp_obs,stat = "N"))),
+                     Rsquare=as.numeric(unlist(modeval(gpp_adj,gpp_obs,stat = "R2"))),
+                     MAE=as.numeric(unlist(modeval(gpp_adj,gpp_obs,stat="MAE"))),
+                     RMSE=as.numeric(unlist(modeval(gpp_adj,gpp_obs,stat="RMSE"))))%>%
+    mutate(para_flag=paras_level)
+  return(df.stat)
+}
 
+#for the parameters is calibrated for site-level(RMSE,R2 for each sites)
+#evaluation on the PFT-Clim categories
+stats_para_f_site<-stat_fun(df_merge_sitelevel,"site-specific")
+#for the parameters is calibrated for PFT-level
+#evaluation on the PFT-Clim categories
+stats_para_f_PFT<-stat_fun(df_merge_PFTlevel,"PFT-specific")
+#for the parameters is calibrated for Allsites-level(general)
+#evaluation on the PFT-Clim categories
+stats_para_f_Allsites<-stat_fun(df_merge_Allsiteslevel,"general")
 
+####summary the stats:
+stats_all<-rbind(rbind(stats_para_f_site,stats_para_f_PFT),stats_para_f_Allsites)
+stats_all_tidy<-stats_all %>%
+  select(Clim_PFTs,Rsquare,MAE,RMSE,para_flag)%>%
+  pivot_longer(c(Rsquare,MAE,RMSE),names_to = "eval_metrics",values_to = "metrics")
+#set the order:
+stats_all_tidy$para_flag<-factor(stats_all_tidy$para_flag,
+      levels = c("site-specific","PFT-specific","general"))
+#sum for all Clim_PFTs groups
+stats_all_tidy_sum<-stats_all_tidy %>%
+  group_by(para_flag,eval_metrics) %>%
+  dplyr::summarise(metrics_mean=mean(metrics),SD=sd(metrics))
 
+###making the plots:
+df_plot<-stats_all_tidy %>%
+  ggplot(aes(x=eval_metrics,y=metrics))+
+  geom_point(size=3,col=adjustcolor("gray"))+
+  geom_boxplot(size=1.1,col=adjustcolor("steelblue",0.9),fill=adjustcolor("white",0.1))+
+  facet_wrap(.~para_flag)+
+  # facet_wrap(para_flag~.)+
+  xlab("")+ylab("")+
+  theme_classic()+
+  plot.theme
+#add the point_range
+# df_stats_final<-df_plot+
+#   geom_pointrange(data = stats_all_tidy_sum,
+#      aes(x=eval_metrics,y=metrics_mean,
+#          ymin=metrics_mean-SD,ymax=metrics_mean+SD),
+#      col=adjustcolor("steelblue",0.9),size=1.1)
+#change the panel labels:
+df_plot<-plot_grid(df_plot,nrow=1,labels = "d")
 
+###put plots a and b together 
+#merge the plots
+plot_final<-plot_grid(evaulation_merge_plot,df_plot,
+    widths=15,heights=8,
+    labels = "",
+    rel_heights = c(1.5,1),
+    ncol =1,nrow = 2,label_size = 12,align = "hv")
+#save the plot
+save.path<-"./manuscript/figures/"
+ggsave(paste0(save.path,"FigureS_pmodel_evaluation_with_diff_cali_paras.png"),
+       plot_final,width = 20,height = 15)
 

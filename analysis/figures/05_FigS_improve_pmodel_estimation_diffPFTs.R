@@ -267,7 +267,7 @@ df_merge_new %>%
 
 ### make evaluation plots
 #(1) For General plots
-# devtools::load_all("D:/Github/rbeni/")
+devtools::load_all("D:/Github/rbeni/")
 # library(rbeni) #-->make the evaluation plot
 library(rbeni)
 library(cowplot)
@@ -427,8 +427,9 @@ season_plot<-df_modobs %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                              "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+               "mod_recent_optim" = "steelblue2", "obs" = "gray4"),
+  # labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+  labels=c(expression(GPP[Pmodel]),expression(GPP[adj]),expression(GPP[obs])))+  ##updated in Nov,2022
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # annotate(geom="text",x=200,y=2,label="")+
@@ -442,8 +443,11 @@ season_plot<-df_modobs %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white"),
-    legend.position = "bottom"
-  )
+    # legend.position = "bottom",
+    legend.position = c(0.75,0.1)
+  )+
+theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
+  
 #print the plot
 tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
                       hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
@@ -547,8 +551,9 @@ season_plot<-test %>%
   ggplot(aes(doy, gpp, color = Source)) +
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
-                                              "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+  "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
+  # labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+  labels=c(expression(GPP[Pmodel]),expression(GPP[adj]),expression(GPP[obs])))+  ##updated in Nov,2022
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # annotate(geom="text",x=200,y=2,label="")+
@@ -562,8 +567,11 @@ season_plot<-test %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white"),
-    legend.position = "bottom"
-  )
+    legend.position = c(0.75,0.1)
+    # legend.position = "bottom"
+  )+
+theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
+  
 ##adding the site numbers in each category:
 nsites<-test %>%
   group_by(Clim_PFTs)%>%
@@ -577,9 +585,9 @@ sites_num.info<-data.frame(
 season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp,
                            tag_pool = sites_num.info$label,size=5)
 
-#save the plot
+#save the plot:3 set parameters-->parameters for 3 different PFTs
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure4_pmodel_vs_obs_forClimPFTs_3set_parameter_fT.png"),
+ggsave(paste0(save.path,"Figure5_pmodel_vs_obs_forClimPFTs_3set_parameter_fT.png"),
        season_plot_new,width = 15,height = 10)
 
 #for different sites
@@ -609,6 +617,5 @@ test %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white"),
-    legend.position = "bottom"
-  )
+    legend.position = "bottom")
 

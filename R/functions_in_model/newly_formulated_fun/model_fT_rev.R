@@ -42,7 +42,7 @@ f_Ts_rev<-function(df,
     #2):S-->state of acclimation
     #---------
     # S[idx]<-max(0, (X[idx] - par["X0"]))
-      S<-max(0, (X[idx] - par["X0"]))
+    S<-max(0, (X[idx] - par["X0"]))
     #-----------
     #3):f_stress:modifying factor for low temperature
     #-----------

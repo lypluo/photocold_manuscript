@@ -130,7 +130,9 @@ df_merge_new<-df_merge.new %>%
 # site-level
 load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
 #PFT-level
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+# load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+#with updated parameter
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs_with_newMF_paras.rds"))
 #All-sites level
 load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_allsites.rds"))
 
@@ -298,6 +300,8 @@ df_modobs_Allsiteslevel<-df_merge_Allsiteslevel%>%
 #
 plot_gpp_modobs_Allsiteslevel<-df_modobs_Allsiteslevel %>%
   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
+
+
 ##additional-->calculate the stats
 library(sirad)
 stats_sitelevel_allsitespooled<-round(unlist(modeval(df_merge_sitelevel$gpp_mod_recent_optim,
@@ -306,6 +310,10 @@ stats_PFTlevel_allsitespooled<-round(unlist(modeval(df_merge_PFTlevel$gpp_mod_re
       df_merge_PFTlevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
 stats_Allsitelevel_allsitespooled<-round(unlist(modeval(df_merge_Allsiteslevel$gpp_mod_recent_optim,
       df_merge_Allsiteslevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
+#update in Nov,2022:also calculate the stats for the original p-model gpp (before the calibration):
+stats_priorCalibration_allsitespooled<-round(unlist(modeval(df_merge_sitelevel$gpp_mod_FULL_ori,
+      df_merge_sitelevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
+
 
 #---
 #change x,y axis labels
@@ -378,6 +386,16 @@ stats_para_f_PFT<-stat_fun(df_merge_PFTlevel,"PFT-specific")
 #for the parameters is calibrated for Allsites-level(general)
 #evaluation on the PFT-Clim categories
 stats_para_f_Allsites<-stat_fun(df_merge_Allsiteslevel,"general")
+##update in Nov,2022-->also calculate the stats between original p-model gpp and gpp_obs:
+stats_prior_cali<-df_merge_Allsiteslevel%>%
+  select(sitename,date,Clim_PFTs,gpp_mod_FULL_ori,gpp_obs_recent)%>%
+  dplyr::mutate(gpp_pmodel=gpp_mod_FULL_ori,gpp_mod_FULL_ori=NULL,
+                gpp_obs=gpp_obs_recent,gpp_obs_recent=NULL)%>%
+  group_by(Clim_PFTs)%>%
+  dplyr::summarise(N=as.numeric(unlist(modeval(gpp_pmodel,gpp_obs,stat = "N"))),
+                   Rsquare=as.numeric(unlist(modeval(gpp_pmodel,gpp_obs,stat = "R2"))),
+                   MAE=as.numeric(unlist(modeval(gpp_pmodel,gpp_obs,stat="MAE"))),
+                   RMSE=as.numeric(unlist(modeval(gpp_pmodel,gpp_obs,stat="RMSE"))))
 
 ####summary the stats:
 stats_all<-rbind(rbind(stats_para_f_site,stats_para_f_PFT),stats_para_f_Allsites)
@@ -390,6 +408,12 @@ stats_all_tidy$para_flag<-factor(stats_all_tidy$para_flag,
 #sum for all Clim_PFTs groups
 stats_all_tidy_sum<-stats_all_tidy %>%
   group_by(para_flag,eval_metrics) %>%
+  dplyr::summarise(metrics_mean=mean(metrics),SD=sd(metrics))
+#update Nov, 2022-->also for the statsbetween original p-model gpp and gpp_obs:
+stats_prior_cali%>%
+  select(Clim_PFTs,Rsquare,MAE,RMSE)%>%
+  pivot_longer(c(Rsquare,MAE,RMSE),names_to = "eval_metrics",values_to = "metrics")%>%
+  group_by(eval_metrics) %>%
   dplyr::summarise(metrics_mean=mean(metrics),SD=sd(metrics))
 
 ###making the plots:

@@ -120,8 +120,6 @@ cost <- function(
   #   )/nrow(df)
   #mse:mean square error
   mse<-mean((df$gpp - df$gpp_mod * df$scaling_factor)^2,na.rm=T)
-  #alternative cost function-->update in Nov,2022:
-  mse
   #mae:mean absolute error:
   # mae<-sum(abs(df$gpp - df$gpp_mod * df$scaling_factor))/nrow(df)
   # This visualizes the process,
@@ -241,34 +239,31 @@ df_merge_new<-df_merge.new %>%
 #   ggplot(aes(x=doy,y=gpp,col=gpp_source))+
 #   geom_point()+
 #   facet_grid(~sitename)
-# #cheking the time series indivudally(date base):
+#cheking the time series indivudally(date base):
 # df_merge_new%>%
 #   filter(sitename=="BE-Vie")%>%
 #   ggplot()+
 #   geom_point(aes(x=date,y=gpp),col="cyan2")+
 #   geom_point(aes(x=date,y=gpp_mod),col="tomato")
-df_merge_new<-df_merge_new %>% filter(sitename=="JP-SMF"|sitename=="US-PFa"|sitename=="US-Syv"|sitename=="CH-Lae"|sitename=="BE-Vie")
-df_merge_new<-df_merge_new %>% filter(sitename!="BE-Vie")
 #---------------------------------
 # optimize for each PFT
 #main PFTs
-# PFTs<-unique(df_merge.new$classid)
-# # optimize for each PFT
+PFTs<-unique(df_merge.new$classid)
+# optimize for each PFT
 # library(tictoc)#-->record the parameterization time
 # tic("start to parameterize")
 # par_PFTs<-c()
 # for(i in 1:length(PFTs)){
 #   df_sel<-df_merge.new %>%
 #     dplyr::filter(classid==PFTs[i])
-#   if(PFTs[i]=="MF"){    
-# #update in Nov, 2022-->set more rounds for parameterization for MF as it have less data
+#   if(PFTs[i]=="MF"){    #update in Nov, 2022
 #     optim_par <- GenSA::GenSA(
 #       par = par,
-#       fn = cost,
+#       fn = cost_MF,
 #       data = df_sel,
 #       lower = lower,
 #       upper = upper,
-#       control = list(max.call=10000))$par
+#       control = list(max.call=5000))$par
 #   }
 #   if(PFTs[i]!="MF"){
 #     optim_par <- GenSA::GenSA(
@@ -287,39 +282,14 @@ df_merge_new<-df_merge_new %>% filter(sitename!="BE-Vie")
 # 
 # names(par_PFTs)<-PFTs
 # print(par_PFTs)
-# # save the optimized data
-# save(par_PFTs,file = paste0("data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
-##adding some test for PFT:Nov,2022->as parameterized parameter for PFT does not work for running 5000 times 
-PFTs_sel<-"MF"
-# set initial value
-par <- c("tau"=5,"X0"=-10,"Smax"=5,"k"=1)
-lower=c(1,-10,5,0)
-upper=c(25,10,25,2)
-# optimize for MF
-library(tictoc)#-->record the parameterization time
-tic("start to parameterize")
-par_PFTs_MF<-c()
-  df_sel<-df_merge_new %>%
-    dplyr::filter(classid==PFTs_sel)
-  if(PFTs_sel=="MF"){
-#update in Nov, 2022-->set more rounds for parameterization for MF as it have less data
-    optim_par <- GenSA::GenSA(
-      par = par,
-      fn = cost_MF, #updated in Nov,2022
-      data = df_sel,
-      lower = lower,
-      upper = upper,
-      control = list(max.call=100))$par
-  }
-  par_PFTs_MF<-optim_par
-
-print("finish parameterization")
-toc()
+# save the optimized data
+save(par_PFTs,file = paste0("data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs_with_newMF_paras.rds"))
 
 #--------------------------------------------------------------
 #(5) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+# load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs_with_newMF_paras.rds"))
 #a.get the stress factor(calibration factor) for each PFT
 df_final<-c()
 for (i in 1:length(PFTs)) {
@@ -559,8 +529,8 @@ season_plot<-df_modobs %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white"),
-    # legend.position = "bottom",
-    legend.position = c(0.75,0.1)
+    legend.position = "bottom",
+    # legend.position = c(0.75,0.1)
   )+
 theme(legend.text.align = 0)  #align the legend (all the letter start at the same positoin)
   
@@ -581,7 +551,7 @@ season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp
 #          y=sites_num.info$y,label=sites_num.info$label)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs_fT.png"),season_plot,width = 15,height = 10)
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_forPFTs_fT_202211.png"),season_plot,width = 15,height = 10)
 
 #b. Seasonal course for each sites in different PFTs:
 # For DBF:

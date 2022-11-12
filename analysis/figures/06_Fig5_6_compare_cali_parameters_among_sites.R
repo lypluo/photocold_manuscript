@@ -146,7 +146,8 @@ data_sel_sites$parameter<-factor(data_sel_sites$parameter,
                                  levels = c("tau","X0","Smax"))
 #-----------
 #b.also load the parameters for diff PFTs:
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+# load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs_with_newMF_paras.rds"))
 paras_PFTs<-data.frame(DBF=par_PFTs$DBF,
                        MF=par_PFTs$MF,
                        EN=par_PFTs$ENF)
@@ -281,7 +282,7 @@ paras_boxplot<-tag_facet(para_sites,x=paras_PFTs_new$x,y=paras_PFTs_new$paramete
                            tag_pool = paras_PFTs_new$label,size=12,col=paras_PFTs_new$col)
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure5_parameters_boxplot.png"),paras_boxplot,height = 5,width = 8)
+ggsave(paste0(save.path,"Figure6_parameters_boxplot.png"),paras_boxplot,height = 5,width = 8)
 
 ###plot part 2:
 #----------------scatter plot------------------
@@ -354,10 +355,11 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     #                                  after_stat(p.value.label),
     #                                  sep = "*\", \"*"),
     #                    label.x=0.5,label.y="bottom"))+
-    ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
-        aes(x=Env_var,y=para,label=PFT,group=PFT,col=PFT),label.fill = "goldenrod1",
-        con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "goldenrod1",
-        con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##DBF
+    ##update in Nov,2022-->remove the circle
+    # ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+    #     aes(x=Env_var,y=para,label=PFT,group=PFT,col=PFT),label.fill = "goldenrod1",
+    #     con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "goldenrod1",
+    #     con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##DBF
     stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
           aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
           method = "lm",formula = y ~ x,lty=2)+
@@ -368,10 +370,11 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     #                       after_stat(p.value.label),
     #                       sep = "*\", \"*"),
     #                 label.x=0.5,label.y="bottom"))+
-    ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$Clim.PFTs=="Dfc-ENF",],
-        aes(x=Env_var,y=para,label=Clim.PFTs,group=Clim.PFTs,col=PFT),label.fill = "magenta1",
-        con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "magenta1",
-        con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##Dfc-ENF
+    ##update in Nov,2022-->remove the circle
+    # ggforce::geom_mark_ellipse(data=df_site_level_new[df_site_level_new$Clim.PFTs=="Dfc-ENF",],
+    #     aes(x=Env_var,y=para,label=Clim.PFTs,group=Clim.PFTs,col=PFT),label.fill = "magenta1",
+    #     con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "magenta1",
+    #     con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##Dfc-ENF
     scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
     xlab(paste0(Env_var," (°C)"))+
     ylab(paste0(para," (°C)"))+
@@ -455,7 +458,7 @@ paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,nrow=3,
           ncol = 1,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure6_parameters_ranges.png"),paras_range,height = 21,width =10)
+ggsave(paste0(save.path,"Figure7_parameters_ranges.png"),paras_range,height = 21,width =10)
 
 #############################additional code ###########################
 #----

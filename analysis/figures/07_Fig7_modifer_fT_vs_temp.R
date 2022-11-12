@@ -1,5 +1,6 @@
 ##---------------------------------------
-#Aim: the check the variation of modifier fT along with the temperature gradient
+#Aim: the check the variation of modifier fT along with the temperature gradient-->
+#the relationship between fT and Tmin in winter or spring
 ##---------------------------------------
 library(dplyr)
 devtools::load_all("D:/Github/rbeni/")
@@ -108,21 +109,75 @@ df_old<-df_old %>%
 #merge data:
 #----
 df_merge_new<-left_join(df_merge,df_old,by=c("sitename", "date", "year"))
-
+#update in Nov,2022-->also add the green-up:
+phenology.path<-"./data/event_length/"
+load(paste0(phenology.path,"df_events_length.RDA"))
+df.pheno<-df_events_all%>%
+  select(sitename,Year,sos,peak)%>%
+  mutate(year=Year,Year=NULL)
+#
+df_merge_new<-left_join(df_merge_new,df.pheno)
 #-----------------------------------
 #(3) start to summarize the data:
 #-----------------------------------
+df_merge_new<-df_merge_new%>%
+  mutate(greenup=ifelse(doy>=sos & doy<=peak,"greenup","Notgreenup"))
 #-----------
-#summarize the meteos/fT for each site
+#A.summarize for the growing season:
+#----------
+df_sum_yearly_1<-df_merge_new %>%
+  group_by(sitename,year,greenup) %>%
+  dplyr::summarise(temp=mean(temp),
+                   prec=sum(prec_fluxnet2015,na.rm = T), #do not use prec from Koen as the data seems strange
+                   vpd=mean(vpd),
+                   ppdf=mean(ppfd),
+                   elv=mean(elv),
+                   tmin_mean=mean(tmin,na.rm = T),
+                   tmin_min=min(tmin,na.rm = T),
+                   tmax=mean(tmax),
+                   fT=mean(scaling_factor_optim),  ##modifier fT
+                   fapar_itpl=mean(fapar_itpl),
+                   fapar_spl=mean(fapar_spl)
+  )
+df_sum_yearly_2<-df_merge_new %>%
+  group_by(sitename,year) %>%
+  dplyr::summarise(lon=unique(lon),
+                   lat=unique(lat),
+                   classid=unique(classid),
+                   koeppen_code=unique(koeppen_code))
+df_sum_yearly<-left_join(df_sum_yearly_1,df_sum_yearly_2)
+#---
+#summary site-years(different seasons) for site
+#---
+df_sum_1<-df_sum_yearly %>%
+  group_by(sitename,greenup) %>%
+  summarise_at(vars(temp:fapar_spl),mean,na.rm=T)
+df_sum_2<-df_sum_yearly %>%
+  group_by(sitename) %>%
+  dplyr::summarise(lon=unique(lon),
+                   lat=unique(lat),
+                   classid=unique(classid),
+                   koeppen_code=unique(koeppen_code))
+df_sum_greenup<-left_join(df_sum_1,df_sum_2)
+
+#-----------
+#B.summarize the meteos/fT for each site
 #-----------
 df_sum_yearly_1<-df_merge_new %>%
-  group_by(sitename,year) %>%
+  #update in Nov,2022-->separate the temperature in different season
+  mutate(month=month(date),
+         season=case_when(month>=3 & month<=5 ~"spring",
+                          month>5 & month<=8 ~"summer",
+                          month>8 & month<=11 ~"autumn",
+                          month>11 | month<3 ~"winter"))%>%
+  group_by(sitename,year,season) %>%
   dplyr::summarise(temp=mean(temp),
             prec=sum(prec_fluxnet2015,na.rm = T), #do not use prec from Koen as the data seems strange
             vpd=mean(vpd),
             ppdf=mean(ppfd),
             elv=mean(elv),
-            tmin=mean(tmin),
+            tmin_mean=mean(tmin,na.rm = T),
+            tmin_min=min(tmin,na.rm = T),
             tmax=mean(tmax),
             fT=mean(scaling_factor_optim),  ##modifier fT
             fapar_itpl=mean(fapar_itpl),
@@ -137,10 +192,10 @@ df_sum_yearly_2<-df_merge_new %>%
 df_sum_yearly<-left_join(df_sum_yearly_1,df_sum_yearly_2)
 
 #---
-#summary site-years for site
+#summary site-years(different seasons) for site
 #---
 df_sum_1<-df_sum_yearly %>%
-  group_by(sitename) %>%
+  group_by(sitename,season) %>%
   summarise_at(vars(temp:fapar_spl),mean,na.rm=T)
 df_sum_2<-df_sum_yearly %>%
   group_by(sitename) %>%
@@ -148,40 +203,45 @@ df_sum_2<-df_sum_yearly %>%
             lat=unique(lat),
             classid=unique(classid),
             koeppen_code=unique(koeppen_code))
-df_sum<-left_join(df_sum_1,df_sum_2)
+df_sum_season<-left_join(df_sum_1,df_sum_2)
 
 ##-----------------------
 #(4) compare fT difference in differnt group
 ##----------------------
-df_sum$Clim.PFTs<-paste0(df_sum$koeppen_code,"-",df_sum$classid)
+df_sum_greenup$Clim.PFTs<-paste0(df_sum_greenup$koeppen_code,"-",df_sum_greenup$classid)
+df_sum_season$Clim.PFTs<-paste0(df_sum_season$koeppen_code,"-",df_sum_season$classid)
 #
 #first merge the parameters with meteos:
 pars_final<-as.data.frame(t(pars_final))
 pars_final$sitename<-rownames(pars_final)
 #merge:
-df_sum_new<-left_join(df_sum,pars_final,by="sitename")
+df_sum_greenup_new<-left_join(df_sum_greenup,pars_final,by="sitename")
+df_sum_season_new<-left_join(df_sum_season,pars_final,by="sitename")
 
 #--------------------------
 #(5)plotting:fT vs Tmean
 #--------------------------
+#-------
+#A.for greenup
+#------
 library(ggrepel)
-plot_data<-df_sum_new %>%
-  dplyr::select(sitename,temp,prec,tmin,fT,classid,Clim.PFTs,tau:k)%>%
+plot_data<-df_sum_greenup_new %>%
+  dplyr::select(sitename,greenup,temp,prec,tmin_mean,tmin_min,fT,classid,Clim.PFTs,tau:k)%>%
   mutate(PFT=classid,classid=NULL)
-plot_fT<-ggplot()+
-  geom_point(data = plot_data,aes(x=temp,y=fT,col=PFT,size=prec))+
-  geom_text_repel(data = plot_data,aes(x=temp,y=fT,col=PFT,label=sitename),size=4)+
+plot_fT_greenup<-ggplot()+
+  geom_point(data = plot_data[plot_data$greenup=="greenup",],aes(x=tmin_min,y=fT,col=PFT,size=prec))+
+  geom_text_repel(data = plot_data[plot_data$greenup=="greenup",],aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
-  geom_smooth(data=plot_data,aes(x=temp,y=fT),col="blue",
+  geom_smooth(data=plot_data[plot_data$greenup=="greenup",],aes(x=tmin_min,y=fT),col="blue",
               method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
-  stat_poly_eq(data=plot_data,
-                 aes(x=temp,y=fT,
-                     label = paste(
-                                   after_stat(rr.label),
-                                   after_stat(p.value.label),
-                                   sep = "*\", \"*"),
-                     ),col="blue")+
-  xlab(expression(T[mean]*" (°C)"))+
+  stat_poly_eq(data=plot_data[plot_data$greenup=="greenup",],
+               aes(x=tmin_min,y=fT,
+                   label = paste(
+                     after_stat(rr.label),
+                     after_stat(p.value.label),
+                     sep = "*\", \"*"),
+               ),col="blue")+
+  xlab(expression(T[min]*" (°C)"))+
   ylab(expression(f[T]))+
   theme(
     legend.text = element_text(size=22),
@@ -194,7 +254,134 @@ plot_fT<-ggplot()+
     panel.background = element_rect(colour ="grey",fill="white")
   )
 
+plot_fT_notgreenup<-ggplot()+
+  geom_point(data = plot_data[plot_data$greenup=="Notgreenup",],aes(x=tmin_min,y=fT,col=PFT,size=prec))+
+  geom_text_repel(data = plot_data[plot_data$greenup=="Notgreenup",],aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  geom_smooth(data=plot_data[plot_data$greenup=="Notgreenup",],aes(x=tmin_min,y=fT),col="blue",
+              method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=plot_data[plot_data$greenup=="Notgreenup",],
+               aes(x=tmin_min,y=fT,
+                   label = paste(
+                     after_stat(rr.label),
+                     after_stat(p.value.label),
+                     sep = "*\", \"*"),
+               ),col="blue")+
+  xlab(expression(T[min]*" (°C)"))+
+  ylab(expression(f[T]))+
+  theme(
+    legend.text = element_text(size=22),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=26),
+    axis.text = element_text(size = 22),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+
+#-------
+#B.for different season:
+#------
+plot_data<-df_sum_season_new %>%
+  dplyr::select(sitename,season,temp,prec,tmin_mean,tmin_min,fT,classid,Clim.PFTs,tau:k)%>%
+  mutate(PFT=classid,classid=NULL)
+####
+plot_fT_spring<-ggplot()+
+  geom_point(data = plot_data[plot_data$season=="spring",],aes(x=tmin_min,y=fT,col=PFT),size=4)+
+  geom_text_repel(data = plot_data[plot_data$season=="spring",],aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  geom_smooth(data=plot_data[plot_data$season=="spring",],aes(x=tmin_min,y=fT),col="blue",
+              method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=plot_data[plot_data$season=="spring",],
+                 aes(x=tmin_min,y=fT,
+                     label = paste(
+                                   after_stat(rr.label),
+                                   after_stat(p.value.label),
+                                   sep = "*\", \"*"),
+                     ),col="blue")+
+  xlab(expression("spring  "*T[min]*" (°C)"))+
+  ylab(expression("spring  "*f[T]))+
+  geom_hline(yintercept = 1,lty=2)+
+  theme(
+    legend.position = "none",
+    legend.text = element_text(size=22),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=26),
+    axis.text = element_text(size = 22),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+####
+plot_fT_winter<-ggplot()+
+  geom_point(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,size=prec))+
+  geom_text_repel(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  geom_smooth(data=plot_data_new_test,aes(x=tmin_min,y=fT),col="blue",
+              method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=plot_data_new_test,
+               aes(x=tmin_min,y=fT,
+                   label = paste(
+                     after_stat(rr.label),
+                     after_stat(p.value.label),
+                     sep = "*\", \"*"),
+               ),col="blue")+
+  xlab(expression(T[min]*" (°C)"))+
+  ylab(expression(f[T]))+
+  theme(
+    legend.text = element_text(size=22),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=26),
+    axis.text = element_text(size = 22),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+
+###Additonal plot:Tmin_winter vs fT_spring:
+plot_data_winter<-plot_data%>%
+  filter(season=="winter")%>%
+  select(sitename,temp,prec,tmin_mean,tmin_min) #select its temperature
+plot_data_spring<-plot_data%>%
+  filter(season=="spring")%>%
+  select(sitename,fT,Clim.PFTs,PFT)
+plot_data_new_test<-left_join(plot_data_winter,plot_data_spring)
+
+plot_fT_winterT_springfT<-ggplot()+
+  geom_point(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT),size=4)+
+  geom_text_repel(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  geom_smooth(data=plot_data_new_test,aes(x=tmin_min,y=fT),col="blue",
+              method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=plot_data_new_test,
+               aes(x=tmin_min,y=fT,
+                   label = paste(
+                     after_stat(rr.label),
+                     after_stat(p.value.label),
+                     sep = "*\", \"*"),
+               ),col="blue")+
+  xlab(expression("winter  "*T[min]*" (°C)"))+
+  ylab(expression("spring  "*f[T]))+
+  geom_hline(yintercept = 1,lty=2)+
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size=22),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=26),
+    axis.text = element_text(size = 22),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+##merge the plots:
+library(cowplot)
+plot_fT<-plot_grid(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,align = 'hv')
+
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure7_fT_vs_Ta.png"),plot_fT,height = 5,width = 9)
+ggsave(paste0(save.path,"Figure8_fT_vs_Ta_test.png"),plot_fT,height = 8,width = 9)
 

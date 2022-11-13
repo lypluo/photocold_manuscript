@@ -2,7 +2,7 @@
 #Aim: To each site, align different years with start of season and compare different
 #years' environmental variables-->to see if if lower Tmin with more severe overestimation
 ##---------------------------------------
-
+library(ggplot2)
 #-------------------------------------------------------------------------
 ##(1)selecting which several sites that are representative for the analysis:
 #-------------------------------------------------------------------------
@@ -111,10 +111,23 @@ plot_2groups<-function(df,site,comp_var,var_unit,do_legend){
 }
 
 ##
-# df<-df_all
-# site<-"US-UMB"
-# comp_var<-"temp_min_fluxnet2015"
-# 
-# do_legend<-TRUE
 #DBF(US-UMB;RU-Fyo);ENF(US-NR1,FI-Hyy);MF(US-PFa,US-Syv)
-plot_2groups(df_all,"US-Syv","temp_min_fluxnet2015","(degreeC)",TRUE)
+sel_sites<-c("US-UMB","RU-Fyo","US-NR1","FI-Hyy","US-PFa","US-Syv")
+plot_all<-c()
+for (i in 1:length(sel_sites)) {
+  plot_temp<-plot_2groups(df_all,sel_sites[i],"temp_min_fluxnet2015","(degreeC)",TRUE)
+  
+  plot_all[[i]]<-plot_temp+
+    ylab(expression("T"[min]*" (°C)"))+
+    annotate(geom = "text",x=40,y=-30,label=sel_sites[i],size=4)
+}
+
+#merge the plots:
+library(ggpubr)
+align.plot<-ggarrange(plot_all[[1]],plot_all[[2]],plot_all[[3]],
+          plot_all[[4]],plot_all[[5]],plot_all[[6]]
+          )
+#save the plot:
+save.path<-"./test/align_plot_diffyears_foreachsite/"
+ggsave(paste0(save.path,"align.plot_eachsite.png"),align.plot,
+       width = 20,height = 12)

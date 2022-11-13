@@ -164,6 +164,9 @@ pos_SWC<-grep("SWC_",names(df_len5_nonnorm$df_dday))
 #only using the data bebtween Jan and June:
 ##the code is in "photocold_manuscript/test/"
 
+#-->update in Nov,2022->save the data:
+save(df_len5_nonnorm,file = paste0("./data/data_used/","ddf_align_data_from_sos.RDA"))
+
 #-------------------------------------------------------------------------
 #(4)going to compare the "event" and "non-event" site
 #-------------------------------------------------------------------------

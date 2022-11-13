@@ -219,12 +219,13 @@ df_sum_greenup_new<-left_join(df_sum_greenup,pars_final,by="sitename")
 df_sum_season_new<-left_join(df_sum_season,pars_final,by="sitename")
 
 #--------------------------
-#(5)plotting:fT vs Tmean
+#(5)plotting:fT vs Tmin
 #--------------------------
 #-------
 #A.for greenup
 #------
 library(ggrepel)
+library(ggpmisc) #r package for function stat_poly_eq
 plot_data<-df_sum_greenup_new %>%
   dplyr::select(sitename,greenup,temp,prec,tmin_mean,tmin_min,fT,classid,Clim.PFTs,tau:k)%>%
   mutate(PFT=classid,classid=NULL)
@@ -308,7 +309,7 @@ plot_fT_spring<-ggplot()+
     legend.text = element_text(size=22),
     legend.key.size = unit(2, 'lines'),
     axis.title = element_text(size=26),
-    axis.text = element_text(size = 22),
+    axis.text = element_text(size = 20),
     text = element_text(size=24),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -316,25 +317,26 @@ plot_fT_spring<-ggplot()+
   )
 ####
 plot_fT_winter<-ggplot()+
-  geom_point(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,size=prec))+
-  geom_text_repel(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
+  geom_point(data = plot_data[plot_data$season=="winter",],aes(x=tmin_min,y=fT,col=PFT),size=4)+
+  geom_text_repel(data = plot_data[plot_data$season=="winter",],aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
-  geom_smooth(data=plot_data_new_test,aes(x=tmin_min,y=fT),col="blue",
+  geom_smooth(data=plot_data[plot_data$season=="winter",],aes(x=tmin_min,y=fT),col="blue",
               method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
-  stat_poly_eq(data=plot_data_new_test,
+  stat_poly_eq(data=plot_data[plot_data$season=="winter",],
                aes(x=tmin_min,y=fT,
                    label = paste(
                      after_stat(rr.label),
                      after_stat(p.value.label),
                      sep = "*\", \"*"),
                ),col="blue")+
-  xlab(expression(T[min]*" (°C)"))+
-  ylab(expression(f[T]))+
+  xlab(expression("winter  "*T[min]*" (°C)"))+
+  ylab(expression("winter  "*f[T]))+
+  geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.text = element_text(size=22),
     legend.key.size = unit(2, 'lines'),
     axis.title = element_text(size=26),
-    axis.text = element_text(size = 22),
+    axis.text = element_text(size = 20),
     text = element_text(size=24),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -365,13 +367,13 @@ plot_fT_winterT_springfT<-ggplot()+
                ),col="blue")+
   xlab(expression("winter  "*T[min]*" (°C)"))+
   ylab(expression("spring  "*f[T]))+
-  geom_hline(yintercept = 1,lty=2)+
+  # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.position = "bottom",
     legend.text = element_text(size=22),
     legend.key.size = unit(2, 'lines'),
     axis.title = element_text(size=26),
-    axis.text = element_text(size = 22),
+    axis.text = element_text(size = 20),
     text = element_text(size=24),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -379,9 +381,13 @@ plot_fT_winterT_springfT<-ggplot()+
   )
 ##merge the plots:
 library(cowplot)
-plot_fT<-plot_grid(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,align = 'hv')
+# plot_fT<-plot_grid(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,align = 'hv')
+#using ggarrange from ggpubr package:
+library(ggpubr)
+ggarrange(plot_fT_spring,plot_fT_winter,nrow = 2,common.legend = TRUE,legend = "bottom")
+plot_fT<-ggarrange(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,common.legend = TRUE,legend = "bottom")
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure8_fT_vs_Ta_test.png"),plot_fT,height = 8,width = 9)
+ggsave(paste0(save.path,"Figure8_fT_vs_Ta.png"),plot_fT,height = 8,width = 9)
 

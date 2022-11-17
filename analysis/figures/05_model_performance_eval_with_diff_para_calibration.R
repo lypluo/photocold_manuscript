@@ -259,6 +259,35 @@ df_merge_Allsiteslevel<-left_join(df_final_Allsiteslevel_new,df_old,by = c("site
 #-------------------------
 library(cowplot)
 
+##general assessment: how much bias was reduced(during the green-up period) for 
+##original p-model and adjusted p-model(using PFT-specific parameters):
+#load the green-up data:
+pheno.path<-"./data/event_length/"
+load(paste0(pheno.path,"df_events_length.RDA"))
+df_pheno<-df_events_all %>%
+  select(sitename,Year,sos,peak)%>%
+  mutate(year=Year,Year=NULL)
+df_merge_PFTlevel<-left_join(df_merge_PFTlevel,df_pheno)
+
+## update in Nov,2022
+df_modobs_comp<-df_merge_PFTlevel%>%
+  filter(doy>=sos & doy<=peak) %>% ##only select the data during the growing season 
+  select(sitename,date,year,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim)%>%
+  mutate(gpp_obs=gpp_obs_recent,
+         gpp_mod_old_ori=gpp_mod_FULL_ori,             #gpp_mod_old_ori-->corrsponds to Stocker et al., 2022
+         gpp_mod_recent_ori=gpp_mod_recent_ori,        #gpp_mod_recent_ori-->updated GPP from Beni
+         gpp_mod_recent_optim=gpp_mod_recent_optim) %>%#gpp_mod_recent_optim-->updated GPP calibrated with paras
+  mutate(gpp_obs_recent=NULL,
+         gpp_mod_FULL_ori=NULL)
+##how much bias is reduced for the model with optimized parameter compaerd to old original p-model:
+library(sirad)
+MAE_Pmodel_ori<-unlist(modeval(df_modobs_comp$gpp_mod_old_ori,df_modobs_comp$gpp_obs,
+                        stat = c("MAE","RMAE","RMSE","RRMSE")))
+MAE_Pmodel_optim<-unlist(modeval(df_modobs_comp$gpp_mod_recent_optim,df_modobs_comp$gpp_obs,
+                               stat = c("MAE","RMAE","RMSE","RRMSE")))
+#reduced bias:
+c(MAE_Pmodel_ori[1]-MAE_Pmodel_optim[1])/MAE_Pmodel_optim[1]
+
 ###############################
 #---a.making scatter plots:evaluation for all sites (GPP_obs vs GPP_adj(with optimized paras))
 ###############################

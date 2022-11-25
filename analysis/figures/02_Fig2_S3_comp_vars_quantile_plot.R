@@ -329,7 +329,7 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
       scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"),
                         labels=c(expression(SY[DSPR]),expression(SY[0])))+
       ylab(paste0(comp_var," ",var_unit))+
-      xlab("gday")+
+      xlab("rday")+
       theme_classic()+
       theme(legend.position = c(0.3,0.9),legend.background = element_blank(),
             legend.key.size = unit(2, 'lines'),

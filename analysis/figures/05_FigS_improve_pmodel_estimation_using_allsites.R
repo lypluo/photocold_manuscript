@@ -28,6 +28,8 @@ df_recent <- readRDS(paste0("./data-raw/raw_data/P_model_output/model_data.rds")
 #     geom_point(aes(x=date,y=gpp_mod),col="red")+
 #     annotate(geom = "text",x=text.Date,y=15,label=sites[i])
 # }
+#do not filter the observation gpp in study:
+df_recent_new<-df_recent
 
 #load the data Beni sent me before:
 df_old<-read.csv(file=paste0("./data-raw/raw_data/Data_sent_by_Beni/","ddf_fluxnet2015_pmodel_with_forcings_stocker19gmd.csv"))
@@ -98,35 +100,34 @@ cost <- function(
 load(paste0("./data-raw/raw_data/sites_info/","Pre_selected_sites_info.RDA"))
 sites.info<-df_sites_sel
 #
-df_recent<-df_recent %>%
+df_merge<-df_recent_new %>%
   left_join(
     sites.info,
     by = "sitename"
   )
-
-#adding day of the year
-library(sirad)  #calculate the day of the year
-df_recent$doy<-dayOfYear(df_recent$date)
+##adding day of the year
+df_merge$doy<-yday(df_merge$date)
 
 #main Clim-PFTs
-df_recent$Clim_PFTs<-paste0(df_recent$koeppen_code,"-",df_recent$classid)
-Clim.PFTs<-sort(unique(df_recent$Clim_PFTs))
+df_merge$Clim_PFTs<-paste0(df_merge$koeppen_code,"-",df_merge$classid)
+Clim.PFTs<-sort(unique(df_merge$Clim_PFTs))
+
 #------------------------------------------
 #normalized the GPP-->for each site,
 #normalized the "gpp" and "gpp_mod" through their 90 percentiles
 #------------------------------------------
 #I should use the same value to normlize the gpp and gpp_mod:
-gpp_P95<-df_recent %>%
+gpp_P95<-df_merge %>%
   group_by(sitename) %>%
   dplyr::summarise(gpp_norm_p95=quantile(c(gpp,gpp_mod),0.95,na.rm=T))
 #
-df_recent<-left_join(df_recent,gpp_P95,by="sitename")
-df_recent<-df_recent %>%
+df_merge.new<-left_join(df_merge,gpp_P95,by="sitename")
+df_merge.new<-df_merge.new %>%
   mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
 
 # need to remove the sites that do not used in this analysis:
 rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
-df_recent.new<-df_recent %>%
+df_merge_new<-df_merge.new %>%
   filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
 
 #optimize for all sites
@@ -162,32 +163,19 @@ df_recent.new<-df_recent %>%
 #--------------------------------------------------------------
 load(paste0("./data/model_parameters/parameters_MAE_newfT/",
             "optim_par_run5000_allsites.rds"))
-#a.get the stress factor(calibration factor) for each Clim-PFT:using the same parameters
-par_Clim_PFTs<-list(a1=par_allsites,a2=par_allsites,a3=par_allsites,a4=par_allsites,
-                    a5=par_allsites,a6=par_allsites,a7=par_allsites,a8=par_allsites,
-                    a9=par_allsites,a10=par_allsites)
-names(par_Clim_PFTs)<-Clim.PFTs
-
-df_final<-c()
-for (i in 1:length(Clim.PFTs)) {
-  df_sel<-df_recent.new %>%
-    dplyr::filter(Clim_PFTs==Clim.PFTs[i])
-
-  scaling_factors <- df_sel %>%
+#
+df_sel<-df_merge_new
+scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- f_Ts_rev(.,par_Clim_PFTs[[i]])
+      scaling_factor <- f_Ts_rev(.,par_allsites)
       data.frame(
         sitename = .$sitename,
         date = .$date,
         scaling_factor_optim = scaling_factor
       )
     })
-  df_sel <- left_join(df_sel, scaling_factors)
-
-  #merge different sites:
-  df_final<-rbind(df_final,df_sel)
-}
+df_final <- left_join(df_sel, scaling_factors)
 
 #-----------------------------
 #need to back-convert the normalized gpp to gpp
@@ -349,59 +337,18 @@ season_plot<-df_modobs %>%
 
 ####
 #save the plot
-save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_1set_parameter_new.png"),season_plot,width = 20,height = 20)
+# save.path<-"./manuscript/figures/"
+# ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_1set_parameter_new.png"),season_plot,width = 20,height = 20)
 
 #--------
-#5b.for Clim-PFTs
+#5b.for Clim-PFTs-->update in Nov,2022
 #--------
-df_modobs<-c()
-for(i in 1:length(Clim.PFTs)){
-  
-  df_modobs_each<-df_final_new %>%
-    filter(Clim_PFTs==Clim.PFTs[i]) %>%
-    select(sitename,date,Clim_PFTs,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
-    mutate(gpp_obs=gpp_obs_recent,
-           gpp_mod_old_ori=gpp_mod_FULL_ori,
-           gpp_mod_recent_ori=gpp_mod_recent_ori,
-           gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
-    mutate(gpp_obs_recent=NULL,
-           gpp_mod_FULL_ori=NULL)
-  #
-  df_modobs<-rbind(df_modobs,df_modobs_each)
-  
-  #scatter plots to compare the model and observation gpp
-  # gpp_modobs_comp1<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_old_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp2<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_ori", "gpp_obs", type = "heat")
-  # gpp_modobs_comp3<-df_modobs_each %>%
-  #   analyse_modobs2("gpp_mod_recent_optim", "gpp_obs", type = "heat")
-  # # add the site-name:
-  # gpp_modobs_comp1$gg<-gpp_modobs_comp1$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # gpp_modobs_comp2$gg<-gpp_modobs_comp2$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # gpp_modobs_comp3$gg<-gpp_modobs_comp3$gg+
-  #   annotate(geom="text",x=15,y=0,label=Clim.PFTs[i])
-  # 
-  # #merge two plots
-  # evaulation_merge_plot<-plot_grid(gpp_modobs_comp1$gg,
-  #                                  gpp_modobs_comp2$gg,gpp_modobs_comp3$gg,
-  #                                  widths=15,heights=4,
-  #   labels = "auto",ncol =3,nrow = 1,label_size = 12,align = "hv")
-  # # plot(evaulation_merge_plot)
-  # 
-  # # put all the plots together:
-  # plot_modobs_general[[i]]<-evaulation_merge_plot
-}
-
-#(2) For Seasonality
-season_plot<-df_modobs %>%
-  mutate(doy = lubridate::yday(date)) %>%
+test<-df_final_new
+#for Clim-PFTs
+season_plot<-test %>%
   group_by(Clim_PFTs, doy) %>%
-  dplyr::summarise(obs = mean(gpp_obs, na.rm = TRUE),
-                   mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
+  dplyr::summarise(obs = mean(gpp_obs_recent, na.rm = TRUE),
+                   mod_old_ori=mean(gpp_mod_FULL_ori, na.rm = TRUE),
                    mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
                    mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
   pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%
@@ -409,7 +356,8 @@ season_plot<-df_modobs %>%
   geom_line() +
   scale_color_manual("GPP sources",values = c("mod_old_ori" = "tomato",
                                               "mod_recent_optim" = "dodgerblue", "obs" = "gray4"),
-                     labels = c("Orig. P-model", "Accli. P-model","Obseravations")) +
+                     # labels = c("Orig. P-model", "Cali. P-model","Observations")) +
+                     labels=c(expression(GPP[Pmodel]),expression(GPP[adj]),expression(GPP[obs])))+  ##updated in Nov,2022
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # annotate(geom="text",x=200,y=2,label="")+
@@ -423,10 +371,22 @@ season_plot<-df_modobs %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white"),
-    # legend.background = element_blank(),
     legend.position = c(0.75,0.1)
-  )
+    # legend.position = "bottom"
+  )+
+  theme(legend.text.align = 0)  #align the legend (all the letter start at the same positoin)
+
 ##adding the site numbers in each category:
+nsites<-test %>%
+  group_by(Clim_PFTs)%>%
+  dplyr::summarise(nsite=length(unique(sitename)))
+nsites$label<-paste0("N = ",nsites$nsite)
+sites_num.info<-data.frame(
+  doy=rep(20,nrow(nsites)),
+  gpp=rep(14,nrow(nsites)),
+  nsites
+)
+
 tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
                       hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
   
@@ -437,22 +397,12 @@ tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y 
                 vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE) 
 }
 
-nsites<-df_modobs %>%
-  group_by(Clim_PFTs)%>%
-  dplyr::summarise(nsite=length(unique(sitename)))
-nsites$label<-paste0("N = ",nsites$nsite)
-sites_num.info<-data.frame(
-  doy=rep(20,nrow(nsites)),
-  gpp=rep(14,nrow(nsites)),
-  nsites
-)
-
 season_plot_new<-tag_facet(season_plot,x=sites_num.info$doy,y=sites_num.info$gpp,
                            tag_pool = sites_num.info$label,size=5)
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure4_pmodel_vs_obs_forClimPFTs_1set_parameter_fT.png"),
+ggsave(paste0(save.path,"FigurS_pmodel_vs_obs_forClimPFTs_1general_parameter_fT.png"),
        season_plot_new,width = 15,height = 10)
 
 

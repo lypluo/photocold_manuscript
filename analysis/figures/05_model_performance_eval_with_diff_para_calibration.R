@@ -340,7 +340,7 @@ stats_PFTlevel_allsitespooled<-round(unlist(modeval(df_merge_PFTlevel$gpp_mod_re
 stats_Allsitelevel_allsitespooled<-round(unlist(modeval(df_merge_Allsiteslevel$gpp_mod_recent_optim,
       df_merge_Allsiteslevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
 #update in Nov,2022:also calculate the stats for the original p-model gpp (before the calibration):
-stats_priorCalibration_allsitespooled<-round(unlist(modeval(df_merge_sitelevel$gpp_mod_FULL_ori,
+stats_priorCalibration_allsitespooled<-round(unlist(modeval(df_merge_sitelevel$gpp_mod_recent_ori,
       df_merge_sitelevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
 
 
@@ -417,8 +417,8 @@ stats_para_f_PFT<-stat_fun(df_merge_PFTlevel,"PFT-specific")
 stats_para_f_Allsites<-stat_fun(df_merge_Allsiteslevel,"general")
 ##update in Nov,2022-->also calculate the stats between original p-model gpp and gpp_obs:
 stats_prior_cali<-df_merge_Allsiteslevel%>%
-  select(sitename,date,Clim_PFTs,gpp_mod_FULL_ori,gpp_obs_recent)%>%
-  dplyr::mutate(gpp_pmodel=gpp_mod_FULL_ori,gpp_mod_FULL_ori=NULL,
+  select(sitename,date,Clim_PFTs,gpp_mod_recent_ori,gpp_obs_recent)%>%
+  dplyr::mutate(gpp_pmodel=gpp_mod_recent_ori,gpp_mod_recent_ori=NULL,
                 gpp_obs=gpp_obs_recent,gpp_obs_recent=NULL)%>%
   group_by(Clim_PFTs)%>%
   dplyr::summarise(N=as.numeric(unlist(modeval(gpp_pmodel,gpp_obs,stat = "N"))),

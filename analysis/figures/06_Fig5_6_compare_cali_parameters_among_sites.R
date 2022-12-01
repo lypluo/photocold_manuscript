@@ -11,6 +11,7 @@ library(tidyverse)
 library(cowplot)
 library(grid)
 library(ggpubr)
+library(lubridate)
 #---------------------------
 #(1)load the calibrated parameters for each site
 #---------------------------
@@ -58,69 +59,112 @@ df_old<-df_old %>%
 #merge data:
 #----
 df_merge_new<-left_join(df_merge,df_old,by=c("sitename", "date", "year"))
+#update in Nov,2022-->also add the green-up information:
+phenology.path<-"./data/event_length/"
+load(paste0(phenology.path,"df_events_length.RDA"))
+df.pheno<-df_events_all%>%
+  select(sitename,Year,sos,peak)%>%
+  mutate(year=Year,Year=NULL)
+#
+df_merge_new<-left_join(df_merge_new,df.pheno)
 
 #-----------
 #summarize the meteos for each site
 #-----------
-df_sum_yearly_1<-df_merge_new %>%
-  group_by(sitename,year) %>%
-  dplyr::summarise(temp=mean(temp),
-            prec=sum(prec),
-            vpd=mean(vpd),
-            ppdf=mean(ppfd),
-            elv=mean(elv),
-            tmin=mean(tmin),
-            tmax=mean(tmax),
-            fapar_itpl=mean(fapar_itpl),
-            fapar_spl=mean(fapar_spl)
-            )
-df_sum_yearly_2<-df_merge_new %>%
-  group_by(sitename,year) %>%
-  dplyr::summarise(lon=unique(lon),
-            lat=unique(lat),
-            classid=unique(classid),
-            koeppen_code=unique(koeppen_code))
-df_sum_yearly<-left_join(df_sum_yearly_1,df_sum_yearly_2)
+#focus on the data in whole year, green-up period,and winter(-60:sos)
+df_merge_new<-df_merge_new%>%
+  mutate(doy=yday(date))%>%
+  mutate(greenup=ifelse(doy>=sos & doy<=peak,"greenup","Notgreenup"))
 
-#---
-#summary site-years for site
-#---
-df_sum_1<-df_sum_yearly %>%
-  group_by(sitename) %>%
-  summarise_at(vars(temp:fapar_spl),mean,na.rm=T)
-df_sum_2<-df_sum_yearly %>%
-  group_by(sitename) %>%
-  dplyr::summarise(lon=unique(lon),
-            lat=unique(lat),
-            classid=unique(classid),
-            koeppen_code=unique(koeppen_code))
-df_sum<-left_join(df_sum_1,df_sum_2)
-
-##-----------------------
-#(3) compare the parameter difference in differnt group
-##----------------------
-df_sum$Clim.PFTs<-paste0(df_sum$koeppen_code,"-",df_sum$classid)
-#only target the sites we used for the analysis:
-##---------------------
-#A.load the event_length data-->the sites we were used
-#---------------------
-load.path<-"./data/event_length/"
-load(paste0(load.path,"df_events_length.RDA"))
+meteo_sum_fun<-function(df,sel_period){
+  # df<-df_merge_new
+  # sel_period<-"greenup"
+  
+  #
+  if(sel_period=="greenup"){
+    df_merge_new<-df %>%
+      filter(greenup=="greenup")
+  }
+  if(sel_period=="winter"){
+    df_merge_new<-df %>%
+      filter(doy>=c(sos-60) & doy<=sos)
+  }
+  if(sel_period=="year"){
+    df_merge_new<-df
+  }
+  if(sel_period=="winter_to_greenup"){
+    df_merge_new<-df %>%
+      filter(doy>=c(sos-60) & doy<=peak)
+  }
+  
+  
+  df_sum_yearly_1<-df_merge_new %>%
+    group_by(sitename,year) %>%
+    dplyr::summarise(temp=mean(temp),
+                     prec=sum(prec),
+                     vpd=mean(vpd),
+                     ppdf=mean(ppfd),
+                     elv=mean(elv),
+                     tmin=mean(tmin),
+                     tmax=mean(tmax),
+                     fapar_itpl=mean(fapar_itpl),
+                     fapar_spl=mean(fapar_spl)
+    )
+  df_sum_yearly_2<-df_merge_new %>%
+    group_by(sitename,year) %>%
+    dplyr::summarise(lon=unique(lon),
+                     lat=unique(lat),
+                     classid=unique(classid),
+                     koeppen_code=unique(koeppen_code))
+  df_sum_yearly<-left_join(df_sum_yearly_1,df_sum_yearly_2)
+  
+  #---
+  #summary site-years for site
+  #---
+  df_sum_1<-df_sum_yearly %>%
+    group_by(sitename) %>%
+    summarise_at(vars(temp:fapar_spl),mean,na.rm=T)
+  df_sum_2<-df_sum_yearly %>%
+    group_by(sitename) %>%
+    dplyr::summarise(lon=unique(lon),
+                     lat=unique(lat),
+                     classid=unique(classid),
+                     koeppen_code=unique(koeppen_code))
+  df_sum<-left_join(df_sum_1,df_sum_2)
+  
+  ##-----------------------
+  #(3) compare the parameter difference in differnt group
+  ##----------------------
+  df_sum$Clim.PFTs<-paste0(df_sum$koeppen_code,"-",df_sum$classid)
+  #only target the sites we used for the analysis:
+  ##---------------------
+  #A.load the event_length data-->the sites we were used
+  #---------------------
+  load.path<-"./data/event_length/"
+  load(paste0(load.path,"df_events_length.RDA"))
+  #
+  used_sites<-unique(df_events_all$sitename)
+  
+  #-----select the data for thoses used sites----
+  #delete the sites do not used:
+  df_final<-df_sum %>%
+    filter(sitename %in% used_sites)
+  return(df_final)
+}
 #
-used_sites<-unique(df_events_all$sitename)
-
-#-----select the data for thoses used sites----
-#delete the sites do not used:
-df_final<-df_sum %>%
-  filter(sitename %in% used_sites)
-
+df_year<-meteo_sum_fun(df_merge_new,"year")
+df_greenup<-meteo_sum_fun(df_merge_new,"greenup")
+df_winter<-meteo_sum_fun(df_merge_new,"winter")
+df_winter_to_greenup<-meteo_sum_fun(df_merge_new,"winter_to_greenup")
 #--------------------------
 #(4)plotting:
 #--------------------------
 #first merge the parameters with meteos:
 pars_final<-as.data.frame(t(pars_final))
 pars_final$sitename<-rownames(pars_final)
-#merge:
+
+#merge-->update in Nov,2022-->changing the df_final(df_year;df_greenup;df_winter) manually right now
+df_final<-df_winter_to_greenup
 df_final_new<-left_join(df_final,pars_final,by="sitename")
 #---
 #check the variables distribution and boxplots
@@ -378,6 +422,7 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
     xlab(paste0(Env_var," (°C)"))+
     ylab(paste0(para," (°C)"))+
+    xlim(-10,15)+
     theme(
       legend.text = element_text(size=22),
       legend.position = c(0.15,0.8),
@@ -391,35 +436,35 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     )
   if(para=="tau"){
     pars_final<-pars_final+
-    annotate(geom = "text",x=-4.1,y=24,label = paste0("italic(R) ^ 2 == ",
+    annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
                       stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
-    annotate(geom = "text",x=1,y=24,label = paste0("italic(p) ==",
+    annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",
                       round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
-    annotate(geom = "text",x=-4.1,y=22,label = paste0("italic(R) ^ 2 == ",
+    annotate(geom = "text",x=10.1,y=22,label = paste0("italic(R) ^ 2 == ",
                       stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta",size=5)+
-    annotate(geom = "text",x=1,y=22,label = paste0("italic(p) == ",
+    annotate(geom = "text",x=14,y=22,label = paste0("italic(p) == ",
                      round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta",size=5)
   }
   if(para=="X0"){
     pars_final<-pars_final+
-      annotate(geom = "text",x=-10,y=5,label = paste0("italic(R) ^ 2 == ",
+      annotate(geom = "text",x=10.1,y=5,label = paste0("italic(R) ^ 2 == ",
                      stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
-      annotate(geom = "text",x=-5,y=5,label = paste0("italic(p) ==",
+      annotate(geom = "text",x=14,y=5,label = paste0("italic(p) ==",
                      round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
-      annotate(geom = "text",x=-10,y=4,label = paste0("italic(R) ^ 2 == ",
+      annotate(geom = "text",x=10.1,y=4,label = paste0("italic(R) ^ 2 == ",
                      stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta1",size=5)+
-      annotate(geom = "text",x=-5,y=4,label = paste0("italic(p) == ",
+      annotate(geom = "text",x=14,y=4,label = paste0("italic(p) == ",
                      round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
   }
   if(para=="Smax"){
     pars_final<-pars_final+
-      annotate(geom = "text",x=-10,y=25,label = paste0("italic(R) ^ 2 == ",
+      annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
                      stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
-      annotate(geom = "text",x=-5,y=25,label = paste0("italic(p) ==",
+      annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",
                      round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
-      annotate(geom = "text",x=-10,y=23.5,label = paste0("italic(R) ^ 2 == ",
+      annotate(geom = "text",x=10.1,y=22.5,label = paste0("italic(R) ^ 2 == ",
                      stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta1",size=5)+
-      annotate(geom = "text",x=-5,y=23.5,label = paste0("italic(p) == ",
+      annotate(geom = "text",x=14,y=22.5,label = paste0("italic(p) == ",
                      round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
   }
   if(do_legend==FALSE){
@@ -444,21 +489,21 @@ p_tmin_Smax<-plot_paras(df_meteo = df_final_new,df_paras = data_sel_final,Env_va
                       para = "Smax",FALSE)
 
 #change the x labels:
-p_tmean_tau<-p_tmin_tau+
+p_tmin_tau<-p_tmin_tau+
   # xlab(expression("T"[min]*" (°C)"))+ylab(expression(tau*""))+
   xlab("")+ylab(expression(tau*""))
-p_tmean_X0<-p_tmin_X0+
+p_tmin_X0<-p_tmin_X0+
   xlab(expression("T"[min]*" (°C)"))+ylab(expression(X[0]*" (°C)"))+
   xlab("")+ylab(expression(X[0]*" (°C)"))
-p_tmean_Smax<-p_tmin_Smax+
+p_tmin_Smax<-p_tmin_Smax+
   xlab(expression("T"[min]*" (°C)"))+ylab(expression(S[max]*" (°C)"))
 
 #merge the plots:
-paras_range<-cowplot::plot_grid(p_tmean_tau,p_tmean_X0,p_tmean_Smax,nrow=3,
+paras_range<-cowplot::plot_grid(p_tmin_tau,p_tmin_X0,p_tmin_Smax,nrow=3,
           ncol = 1,labels = "auto",label_size = 20,align = "hv")
 ######save the plot###########
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure7_parameters_ranges.png"),paras_range,height = 21,width =10)
+ggsave(paste0(save.path,"Figure7_winter_to_geenup_parameters_ranges.png"),paras_range,height = 21,width =10)
 
 #############################additional code ###########################
 #----

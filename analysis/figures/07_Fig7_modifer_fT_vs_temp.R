@@ -303,7 +303,7 @@ plot_fT_spring<-ggplot()+
                      ),col="blue")+
   xlab(expression("spring  "*T[min]*" (°C)"))+
   ylab(expression("spring  "*f[T]))+
-  geom_hline(yintercept = 1,lty=2)+
+  # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.position = "none",
     legend.text = element_text(size=22),
@@ -331,7 +331,7 @@ plot_fT_winter<-ggplot()+
                ),col="blue")+
   xlab(expression("winter  "*T[min]*" (°C)"))+
   ylab(expression("winter  "*f[T]))+
-  geom_hline(yintercept = 1,lty=2)+
+  # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.text = element_text(size=22),
     legend.key.size = unit(2, 'lines'),
@@ -352,7 +352,7 @@ plot_data_spring<-plot_data%>%
   select(sitename,fT,Clim.PFTs,PFT)
 plot_data_new_test<-left_join(plot_data_winter,plot_data_spring)
 
-plot_fT_winterT_springfT<-ggplot()+
+plot_winterT_springfT<-ggplot()+
   geom_point(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT),size=4)+
   geom_text_repel(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
@@ -369,7 +369,7 @@ plot_fT_winterT_springfT<-ggplot()+
   ylab(expression("spring  "*f[T]))+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
-    legend.position = "bottom",
+    legend.position = "none",
     legend.text = element_text(size=22),
     legend.key.size = unit(2, 'lines'),
     axis.title = element_text(size=26),
@@ -379,15 +379,77 @@ plot_fT_winterT_springfT<-ggplot()+
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
   )
+
+#-------
+#C.adding the relationship: winter Tmin vs GPP bias in the early spring
+#update in Nov, 2022
+#------
+#oad the GPP data(has been characterized as "overestimated" or "non-overestimated")
+load.path<-"./data/data_used/"
+#from new method:
+load(paste0(load.path,"ddf_labeled_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
+df_all_sites<-ddf_labeled;rm(ddf_labeled) 
+#select the needed variables 
+df_GPP<-df_all_sites%>%
+  select(sitename,date,doy,greenup,gpp_obs,gpp_mod_FULL,gpp_res)%>%
+  filter(greenup=="yes")%>% ##selecting the green-up period data
+  group_by(sitename)%>%
+  dplyr::summarise(gpp_obs_GP=mean(gpp_obs,na.rm=T),
+      gpp_mod_GP=mean(gpp_mod_FULL,na.rm=T),
+      gpp_bias=mean(c(gpp_mod_GP - gpp_obs_GP),na.rm=T),
+                   #gpp_bias_rel:relative bias
+      gpp_bias_rel=mean(c(gpp_mod_GP - gpp_obs_GP)/gpp_obs_GP,na.rm=T)*100
+  )   #GP:for green-up(GPP resumption) period
+###
+df_winterTmin_bias<-left_join(plot_data_new_test,df_GPP)
+#plotting
+plot_winterT_GPPbias<-ggplot()+
+  geom_point(data = df_winterTmin_bias,aes(x=tmin_min,y=gpp_bias_rel,col=PFT),size=4)+
+  geom_text_repel(data = df_winterTmin_bias,aes(x=tmin_min,y=gpp_bias_rel,col=PFT,label=sitename),size=4)+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  geom_smooth(data=df_winterTmin_bias,aes(x=tmin_min,y=gpp_bias_rel),col="blue",
+              method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=df_winterTmin_bias,
+               aes(x=tmin_min,y=fT,
+                   label = paste(
+                     after_stat(rr.label),
+                     after_stat(p.value.label),
+                     sep = "*\", \"*"),
+               ),col="blue")+
+  xlab(expression("winter  "*T[min]*" (°C)"))+
+  ylab(expression("GPP"[bias]*" (%)"))+
+  # geom_hline(yintercept = 1,lty=2)+
+  theme(
+    legend.position = c(0.7,0.75),
+    legend.background = element_blank(),
+    legend.direction = "horizontal",
+    legend.text = element_text(size=16),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=26),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+
 ##merge the plots:
 library(cowplot)
 # plot_fT<-plot_grid(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,align = 'hv')
 #using ggarrange from ggpubr package:
 library(ggpubr)
-ggarrange(plot_fT_spring,plot_fT_winter,nrow = 2,common.legend = TRUE,legend = "bottom")
-plot_fT<-ggarrange(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,common.legend = TRUE,legend = "bottom")
+# ggarrange(plot_fT_spring,plot_fT_winter,nrow = 2,common.legend = TRUE,legend = "bottom")
+plot_fT<-ggarrange(plot_fT_spring,
+        plot_winterT_springfT,plot_winterT_GPPbias,align = "v",
+        nrow = 3,common.legend = TRUE,legend = "bottom")
+plot_fT<-plot_grid(plot_fT_spring,
+                   plot_winterT_springfT,plot_winterT_GPPbias,
+                   labels = c("a","b","c"),
+                   align = "v",
+                   nrow = 3,ncol=1)
+
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure8_fT_vs_Ta.png"),plot_fT,height = 8,width = 9)
+ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias.png"),plot_fT,height = 10,width = 9)
 

@@ -6,6 +6,7 @@
 #-->after set the iteration to 5000, the model improved substantially
 #----------
 library(tidyverse)
+library(lubridate)
 #-------------------------
 #(1)load the data and hardening funciton
 #-------------------------
@@ -134,7 +135,7 @@ sel_sites<-unique(df_merge_new$sitename)
 # tic("start to parameterize")
 # par_mutisites<-c()
 # for(i in 1:length(sel_sites)){
-#   df_sel<-df_recent %>%
+#   df_sel<-df_merge_new %>%
 #     dplyr::filter(sitename==sel_sites[i])
 # 
 #   optim_par <- GenSA::GenSA(
@@ -154,12 +155,12 @@ sel_sites<-unique(df_merge_new$sitename)
 # names(par_mutisites)<-sel_sites
 # print(par_mutisites)
 # # save the optimized data
-# save(par_mutisites,file = paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+# save(par_mutisites,file = paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite_new.rds"))
 
 #--------------------------------------------------------------
 #(4) compare the gpp_obs, ori modelled gpp, and gpp modelled using optimated parameters
 #--------------------------------------------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite_new.rds"))
 #a.get the stress factor(calibration factor) for each site
 df_final<-c()
 for (i in 1:length(sel_sites)) {
@@ -169,7 +170,8 @@ for (i in 1:length(sel_sites)) {
   scaling_factors <- df_sel %>%
     # group_by(sitename, year) %>%
     do({
-      scaling_factor <- f_Ts_rev(.,par_mutisites[[i]])
+      # scaling_factor <- f_Ts_rev(.,par_mutisites[[i]])
+      scaling_factor <- f_Ts_rev(.,t1[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -195,7 +197,7 @@ df_final_new$year<-lubridate::year(df_final_new$date)
 df_final_new<-left_join(df_final_new,df_old,by = c("sitename", "date", "year")) %>%
   mutate(gpp_obs_recent=gpp,
          gpp_obs_old=gpp_obs,
-         gpp_mod_FULL_ori=gpp_mod_FULL,
+         gpp_mod_old_ori=gpp_mod_FULL,
          gpp_mod_recent_ori=gpp_mod,
          gpp_mod_recent_optim=gpp_mod*scaling_factor_optim,
          gpp=NULL,
@@ -210,13 +212,12 @@ df_modobs<-c()
 for(i in 1:length(sel_sites)){
 
   df_modobs_each<-df_final_new %>%
-    select(sitename,date,gpp_obs_recent,gpp_mod_FULL_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
+    filter(sitename==sel_sites[[i]])%>%
+    select(sitename,date,gpp_obs_recent,gpp_mod_old_ori,gpp_mod_recent_ori,gpp_mod_recent_optim) %>%
     mutate(gpp_obs=gpp_obs_recent,
-           gpp_mod_old_ori=gpp_mod_FULL_ori,
            gpp_mod_recent_ori=gpp_mod_recent_ori,
            gpp_mod_recent_optim=gpp_mod_recent_optim) %>%
-    mutate(gpp_obs_recent=NULL,
-           gpp_mod_FULL_ori=NULL)
+    mutate(gpp_obs_recent=NULL)
   #
   df_modobs<-rbind(df_modobs,df_modobs_each)
 
@@ -301,7 +302,7 @@ season_plot<-df_modobs %>%
 ####
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_fT.png"),season_plot,width = 20,height = 20)
+ggsave(paste0(save.path,"FigureS_pmodel_vs_obs_foreachsite_fT_new.png"),season_plot,width = 20,height = 20)
 
 #------------------------------------------
 #Additional plots(update in Nov,2022):compare the modelled GPP with optimized parameter(for each site)

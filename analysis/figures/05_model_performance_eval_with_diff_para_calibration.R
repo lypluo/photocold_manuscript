@@ -128,7 +128,7 @@ df_merge_new<-df_merge.new %>%
 #--------------------------------------------------------------
 #---a.load the optimized parameters from different scales
 # site-level
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite_new.rds"))
 #PFT-level
 # load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_PFTs.rds"))
 #with updated parameter
@@ -343,7 +343,6 @@ stats_Allsitelevel_allsitespooled<-round(unlist(modeval(df_merge_Allsiteslevel$g
 stats_priorCalibration_allsitespooled<-round(unlist(modeval(df_merge_sitelevel$gpp_mod_recent_ori,
       df_merge_sitelevel$gpp_obs_recent,stat = c("MAE","RMSE","R2"))),2)
 
-
 #---
 #change x,y axis labels
 #---
@@ -474,5 +473,5 @@ plot_final<-plot_grid(evaulation_merge_plot,df_plot,
 #save the plot
 save.path<-"./manuscript/figures/"
 ggsave(paste0(save.path,"FigureS_pmodel_evaluation_with_diff_cali_paras.png"),
-       plot_final,width = 20,height = 15)
+       plot_final,width = 19.2,height = 15)
 

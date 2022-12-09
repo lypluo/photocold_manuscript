@@ -15,7 +15,7 @@ library(lubridate)
 #---------------------------
 #(1)load the calibrated parameters for each site
 #---------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite_new.rds"))
 #merge the parameters:
 merge_pars<-c()
 sites<-names(par_mutisites)

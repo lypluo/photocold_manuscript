@@ -13,7 +13,8 @@ library(lubridate)
 #---------------------------
 #(1)load the calibrated parameters for each site
 #---------------------------
-load(paste0("./data/model_parameters/parameters_MAE_newfT/","optim_par_run5000_eachsite.rds"))
+load(paste0("./data/model_parameters/parameters_MAE_newfT/",
+            "optim_par_run5000_eachsite_new.rds"))
 #merge the parameters:
 merge_pars<-c()
 sites<-names(par_mutisites)
@@ -48,6 +49,12 @@ gpp_P95<-df_recent %>%
 df_recent<-left_join(df_recent,gpp_P95,by="sitename")
 df_recent<-df_recent %>%
   mutate(gpp=gpp/gpp_norm_p95,gpp_mod=gpp_mod/gpp_norm_p95)
+##
+# need to remove the sites that do not used in this analysis:
+rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+df_recent<-df_recent %>%
+  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
+#
 sel_sites<-unique(df_recent$sitename)
 
 #-------------------------
@@ -82,10 +89,10 @@ for (i in 1:length(sel_sites)) {
 df_final_new<-df_final %>%
   mutate(gpp=gpp*gpp_norm_p95,
          gpp_mod=gpp_mod*gpp_norm_p95)
-# need to remove the sites that do not used in this analysis:
-rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
-df_final_new<-df_final_new %>%
-  filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
+# # need to remove the sites that do not used in this analysis:
+# rm.sites<-c("BE-Bra","CA-SF1","CA-SF2","FI-Sod","US-Wi4")
+# df_final_new<-df_final_new %>%
+#   filter(sitename!=rm.sites[1] & sitename!=rm.sites[2]&sitename!=rm.sites[3]&sitename!=rm.sites[4]&sitename!=rm.sites[5])
 
 #-------------------------------
 #load the PFTs information:
@@ -439,9 +446,9 @@ library(cowplot)
 #using ggarrange from ggpubr package:
 library(ggpubr)
 # ggarrange(plot_fT_spring,plot_fT_winter,nrow = 2,common.legend = TRUE,legend = "bottom")
-plot_fT<-ggarrange(plot_fT_spring,
-        plot_winterT_springfT,plot_winterT_GPPbias,align = "v",
-        nrow = 3,common.legend = TRUE,legend = "bottom")
+# plot_fT<-ggarrange(plot_fT_spring,
+#         plot_winterT_springfT,plot_winterT_GPPbias,align = "v",
+#         nrow = 3,common.legend = TRUE,legend = "bottom")
 plot_fT<-plot_grid(plot_fT_spring,
                    plot_winterT_springfT,plot_winterT_GPPbias,
                    labels = c("a","b","c"),
@@ -451,5 +458,5 @@ plot_fT<-plot_grid(plot_fT_spring,
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias.png"),plot_fT,height = 10,width = 9)
+ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias_new.png"),plot_fT,height = 10,width = 9)
 

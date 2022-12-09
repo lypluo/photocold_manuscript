@@ -171,7 +171,7 @@ for (i in 1:length(sel_sites)) {
     # group_by(sitename, year) %>%
     do({
       # scaling_factor <- f_Ts_rev(.,par_mutisites[[i]])
-      scaling_factor <- f_Ts_rev(.,t1[[i]])
+      scaling_factor <- f_Ts_rev(.,par_mutisites[[i]])
       data.frame(
         sitename = .$sitename,
         date = .$date,
@@ -316,7 +316,7 @@ test<-df_final_new
 season_plot<-test %>%
   group_by(Clim_PFTs, doy) %>%
   dplyr::summarise(obs = mean(gpp_obs_recent, na.rm = TRUE),
-                   mod_old_ori=mean(gpp_mod_FULL_ori, na.rm = TRUE),
+                   mod_old_ori=mean(gpp_mod_old_ori, na.rm = TRUE),
                    mod_recent_ori=mean(gpp_mod_recent_ori, na.rm = TRUE),
                    mod_recent_optim=mean(gpp_mod_recent_optim,na.rm = TRUE)) %>%
   pivot_longer(c(obs,mod_old_ori,mod_recent_optim), names_to = "Source", values_to = "gpp") %>%

@@ -225,13 +225,13 @@ plot_sites<-df_meandoy_norm %>%
   #   fill = "black", 
   #   alpha = 0.2
   #   ) +
-  geom_line(aes(x = doy, y = gpp, color = model)) +
+  geom_line(aes(x = doy, y = gpp, color = model),size=0.8) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   facet_wrap( ~sitename) +
   # theme_gray() +
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-    "gpp_pmodel" = "red","gpp_lmer"="dodgerblue"),
+    "gpp_pmodel" = "orange","gpp_lmer"="grey"),
     labels = c(expression(GPP[obs]),expression(GPP[Pmodel]),expression(GPP[LME])))+
     # labels = c("Obervations","P-model","LME"))+
   # scale_color_manual(
@@ -311,7 +311,7 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd","gpp_lmer")) %>%
   dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel","gpp_lmer"))) %>% ##select only one lm
   ggplot() +
-  geom_line(aes(x = doy, y = gpp, color = model)) +
+  geom_line(aes(x = doy, y = gpp, color = model),size=0.8) +
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # facet_wrap( ~Clim_PFTs, ncol = 3, scales = "free_y" ) +
@@ -322,7 +322,7 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-     "gpp_pmodel" = "red", "gpp_lmer" = "dodgerblue"),
+     "gpp_pmodel" = "orange", "gpp_lmer" = "grey"),
      labels = c(expression(GPP[obs]),expression(GPP[Pmodel]),expression(GPP[LME])))+
      # labels = c("Observations","P-model","LME")) +
   theme(
@@ -338,5 +338,31 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
     legend.position = c(0.75,0.1)
   )+
 theme(legend.text.align = 0)  #align the legend (all the letter start at the same positoin)
-
-ggsave("./manuscript/figures/Figure1_gpp_meandoy_norm_forClimPFTs.png",plot_final,width = 15,height = 10)
+##adding the site number in each Clim-PFTs panel:
+#update using original p-model
+##
+nsites<-ddf_norm %>%
+  group_by(Clim_PFTs)%>%
+  dplyr::summarise(nsite=length(unique(sitename)))
+nsites$label<-paste0("N = ",nsites$nsite)
+sites_num.info<-data.frame(
+  doy=rep(20,nrow(nsites)),
+  gpp=rep(14,nrow(nsites)),
+  nsites
+)
+#function to add the site number info:
+#print the plot
+tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
+                      hjust = -0.5, vjust = 1.5, fontface = 2, family = "", ...) {
+  
+  gb <- ggplot_build(p)
+  lay <- gb$layout$layout
+  tags <- cbind(lay, label = paste0(open, tag_pool[lay$PANEL], close), x = x, y = y)
+  p + geom_text(data = tags, aes_string(x = "x", y = "y", label = "label"), ..., hjust = hjust, 
+                vjust = vjust, fontface = fontface, family = family, inherit.aes = FALSE) 
+}
+library(egg)
+plot_final_addN<-tag_facet(plot_final,x=sites_num.info$doy,y=sites_num.info$gpp,
+                           tag_pool = sites_num.info$label,size=5)
+#
+ggsave("./manuscript/figures/Figure2_gpp_meandoy_norm_forClimPFTs.png",plot_final_addN,width = 15,height = 10)

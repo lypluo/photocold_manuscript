@@ -128,6 +128,19 @@ do_vars<-c("gpp_obs","fapar_itpl","fapar_spl",paste0(c("ppfd","PPFD_IN_fullday_m
            "gcc_90","rcc_90")
 #set the before events days from 30 days to 60 days
 df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep20,5,60,0,10,FALSE)
+#calculate the site-years for each group (event and non-event sites):
+#
+event_siteyears<-df_len5_nonnorm$df_dday %>%
+  select(sitename,Year)%>%
+  mutate(site_years=paste0(sitename,Year))
+length(unique(event_siteyears$site_years))
+#
+noevent_siteyears<-df_len5_nonnorm$df_noevent_dday %>%
+  select(sitename,Year)%>%
+  mutate(site_years=paste0(sitename,Year))
+length(unique(noevent_siteyears$site_years))
+
+
 
 #-------------------------------------------------------------------------
 #(3)calculating some important variables like LUE...

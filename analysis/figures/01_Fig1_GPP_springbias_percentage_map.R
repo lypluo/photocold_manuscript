@@ -225,5 +225,5 @@ p_final<-gg+
   #                  size = 2.8)
 #save the plots
 save.path<-"./manuscript/figures/"
-ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_colored_bias.png"),
+ggsave(file=paste0(save.path,"Figure1_sites_distribution_with_colored_bias.png"),
        p_final,dev="png",width = 12,height=7)

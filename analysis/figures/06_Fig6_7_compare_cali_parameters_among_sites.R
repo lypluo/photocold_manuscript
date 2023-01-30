@@ -387,9 +387,9 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     geom_point(data=df_site_level_new,aes(x=Env_var,y=para,col=PFT),size=3)+
     # scale_color_discrete_sequential(palette = "Viridis")+
     geom_text_repel(data=df_site_level_new,aes(x=Env_var,y=para,label=sitename),size=5)+
-    stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
-                aes(x=Env_var,y=para,col=PFT),
-                fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2)+
+    #!update in Jan,2023: stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+    #             aes(x=Env_var,y=para,col=PFT),
+    #             fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2)+
     # stat_poly_eq(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
     #                aes(x=Env_var,y=para,col=PFT,
     #                    label = paste(
@@ -404,9 +404,9 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     #     aes(x=Env_var,y=para,label=PFT,group=PFT,col=PFT),label.fill = "goldenrod1",
     #     con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "goldenrod1",
     #     con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##DBF
-    stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
-          aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
-          method = "lm",formula = y ~ x,lty=2)+
+    #!update in Jan,2023:stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+    #       aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
+    #       method = "lm",formula = y ~ x,lty=2)+
     # stat_poly_eq(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
     #                  aes(x=Env_var,y=para,col=PFT,
     #                     label = paste(
@@ -426,6 +426,7 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     theme(
       legend.text = element_text(size=22),
       legend.position = c(0.15,0.8),
+      legend.background = element_rect(fill = "white"),
       legend.key.size = unit(2, 'lines'),
       axis.title = element_text(size=26),
       axis.text = element_text(size = 22),
@@ -436,6 +437,14 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     )
   if(para=="tau"){
     pars_final<-pars_final+
+    stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+                     aes(x=Env_var,y=para,col=PFT),
+                     fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2,
+                     show_guide=FALSE)+
+    stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+                     aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
+                     method = "lm",formula = y ~ x,lty=2,
+                     show_guide = FALSE)+
     annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
                       stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
     annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",
@@ -458,6 +467,14 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   }
   if(para=="Smax"){
     pars_final<-pars_final+
+      # stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+      #                aes(x=Env_var,y=para,col=PFT),
+      #                fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2,
+      #                show_guide=FALSE)+
+      # stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+      #                aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
+      #                method = "lm",formula = y ~ x,lty=2,
+      #                show_guide = FALSE)+
       annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
                      stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
       annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",
@@ -467,6 +484,7 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
       annotate(geom = "text",x=14,y=22.5,label = paste0("italic(p) == ",
                      round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
   }
+  
   if(do_legend==FALSE){
     pars_final<-pars_final+
       theme(legend.position = "none")

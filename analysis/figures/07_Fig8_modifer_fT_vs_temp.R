@@ -390,8 +390,10 @@ plot_winterT_springfT<-ggplot()+
 #-------
 #C.adding the relationship: winter Tmin vs GPP bias in the early spring
 #update in Nov, 2022
+#update in Jan, 2023-->both before and after applying the temperature acclimation factor
 #------
-#oad the GPP data(has been characterized as "overestimated" or "non-overestimated")
+##C1:GPP bias calculated using original P-model
+#load the GPP data(has been characterized as "overestimated" or "non-overestimated")
 load.path<-"./data/data_used/"
 #from new method:
 load(paste0(load.path,"ddf_labeled_norm_trs_newmethod_all_overestimation_Fluxnet2015_sites.RDA"))
@@ -407,27 +409,42 @@ df_GPP<-df_all_sites%>%
                    #gpp_bias_rel:relative bias
       gpp_bias_rel=mean(c(gpp_mod_GP - gpp_obs_GP)/gpp_obs_GP,na.rm=T)*100
   )   #GP:for green-up(GPP resumption) period
-###
-df_winterTmin_bias<-left_join(plot_data_new_test,df_GPP)
+##C2:GPP bias calculated using P-model with applying the temperature acclimation factor:
+df_GPP_optim<-df_merge_new %>%
+  select(sitename,date,doy,greenup,gpp_obs,gpp_mod,scaling_factor_optim)%>%
+  dplyr::mutate(gpp_mod_optim=gpp_mod*scaling_factor_optim,
+         gpp_mod=NULL,scaling_factor_optim=NULL)%>%
+  filter(greenup=="greenup")%>% ##selecting the green-up period data
+  group_by(sitename)%>%
+  dplyr::summarise(gpp_obs_GP=mean(gpp_obs,na.rm=T),
+                   gpp_mod_optim_GP=mean(gpp_mod_optim,na.rm=T),
+                   gpp_bias=mean(c(gpp_mod_optim_GP - gpp_obs_GP),na.rm=T),
+                   #gpp_bias_rel:relative bias
+                   gpp_bias_rel_optim=mean(c(gpp_mod_optim_GP - gpp_obs_GP)/gpp_obs_GP,na.rm=T)*100
+  )   #GP:for green-up(GPP resumption) period
+
+###(a) for Prior GPP bias:
+df_winterTmin_bias_prior<-left_join(plot_data_new_test,df_GPP)
 #plotting
-plot_winterT_GPPbias<-ggplot()+
-  geom_point(data = df_winterTmin_bias,aes(x=tmin_min,y=gpp_bias_rel,col=PFT),size=4)+
-  geom_text_repel(data = df_winterTmin_bias,aes(x=tmin_min,y=gpp_bias_rel,col=PFT,label=sitename),size=4)+
+plot_winterT_GPPbia_prior<-ggplot()+
+  geom_point(data = df_winterTmin_bias_prior,aes(x=tmin_min,y=gpp_bias_rel,col=PFT),size=4)+
+  geom_text_repel(data = df_winterTmin_bias_prior,aes(x=tmin_min,y=gpp_bias_rel,col=PFT,label=sitename),size=4)+
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
-  geom_smooth(data=df_winterTmin_bias,aes(x=tmin_min,y=gpp_bias_rel),col="blue",
+  geom_smooth(data=df_winterTmin_bias_prior,aes(x=tmin_min,y=gpp_bias_rel),col="blue",
               method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
-  stat_poly_eq(data=df_winterTmin_bias,
-               aes(x=tmin_min,y=fT,
+  stat_poly_eq(data=df_winterTmin_bias_prior,
+               aes(x=tmin_min,y=gpp_bias_rel,
                    label = paste(
                      after_stat(rr.label),
                      after_stat(p.value.label),
                      sep = "*\", \"*"),
                ),col="blue")+
   xlab(expression("winter  "*T[min]*" (°C)"))+
-  ylab(expression("GPP"[bias]*" (%)"))+
+  ylab(expression("GPP"[prior-bias]*" (%)"))+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.position = c(0.7,0.75),
+    # legend.position = "none",
     legend.background = element_blank(),
     legend.direction = "horizontal",
     legend.text = element_text(size=16),
@@ -440,6 +457,42 @@ plot_winterT_GPPbias<-ggplot()+
     panel.background = element_rect(colour ="grey",fill="white")
   )
 
+###(b) for Post GPP bias:
+df_winterTmin_bias_post<-left_join(plot_data_new_test,df_GPP_optim)
+#plotting
+plot_winterT_GPPbias_post<-ggplot()+
+  geom_point(data = df_winterTmin_bias_post,aes(x=tmin_min,y=gpp_bias_rel_optim,col=PFT),size=4)+
+  geom_text_repel(data = df_winterTmin_bias_post,aes(x=tmin_min,y=gpp_bias_rel_optim,col=PFT,label=sitename),size=4)+
+  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  #update in Jan,2023
+  # geom_smooth(data=df_winterTmin_bias_post,aes(x=tmin_min,y=gpp_bias_rel_optim),col="white",se=FALSE,
+  #             method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  stat_poly_eq(data=df_winterTmin_bias_post,
+               aes(x=tmin_min,y=gpp_bias_rel_optim,
+                   label = paste(
+                     after_stat(rr.label),
+                     after_stat(p.value.label),
+                     sep = "*\", \"*"),
+               ),label.y = 0.85,
+               col="blue")+
+  xlab(expression("winter  "*T[min]*" (°C)"))+
+  ylab(expression("GPP"[post-bias]*" (%)"))+
+  # geom_hline(yintercept = 1,lty=2)+
+  theme(
+    legend.position = "none",
+    legend.background = element_blank(),
+    legend.direction = "horizontal",
+    legend.text = element_text(size=16),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=26),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white")
+  )
+
+
 ##merge the plots:
 library(cowplot)
 # plot_fT<-plot_grid(plot_fT_spring,plot_fT_winterT_springfT,nrow = 2,align = 'hv')
@@ -449,8 +502,16 @@ library(ggpubr)
 # plot_fT<-ggarrange(plot_fT_spring,
 #         plot_winterT_springfT,plot_winterT_GPPbias,align = "v",
 #         nrow = 3,common.legend = TRUE,legend = "bottom")
-plot_fT<-plot_grid(plot_fT_spring,
-                   plot_winterT_springfT,plot_winterT_GPPbias,
+#plot 1-->not use in Jan, 2023
+# plot_fT<-plot_grid(plot_fT_spring,
+#                    plot_winterT_springfT,plot_winterT_GPPbias,
+#                    labels = c("a","b","c"),
+#                    align = "v",
+#                    nrow = 3,ncol=1)
+#
+plot_fT<-plot_grid(plot_winterT_springfT,
+                   plot_winterT_GPPbia_prior,
+                   plot_winterT_GPPbias_post,
                    labels = c("a","b","c"),
                    align = "v",
                    nrow = 3,ncol=1)
@@ -458,5 +519,5 @@ plot_fT<-plot_grid(plot_fT_spring,
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias_new.png"),plot_fT,height = 10,width = 9)
+ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias_new.png"),plot_fT,height = 11,width = 9)
 

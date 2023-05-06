@@ -11,12 +11,17 @@
 #' @return A ggplot object for a global map plot.
 #' @export
 #'
-plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 85){
+plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin =30, latmax = 85){
   
   library(rworldmap)
   library(ggplot2)
   library(rnaturalearth)
   library(sf)
+  #
+  # lonmin= -180
+  # lonmax = 180
+  # latmin=30
+  # latmax=80 ##latmax should be higher 75
   
   # download global coastline data from naturalearth
   countries <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")
@@ -105,12 +110,12 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin = -60, latmax = 8
     # coord_sf(
     #   ylim = c(-60, 90)
     # ) +
-    #manually add it-->!!and also the break should not in the boundary, 
+    #manually add it-->!!and also the break should not outside the boundary, 
     #for instance:breaks cannot include -180 and 180 of longtitude
-    scale_x_continuous(expand = c(0, 0),limits = c(-180,180),
+    scale_x_continuous(expand = c(0, 0),limits = c(lonmin,lonmax),
                        breaks =ewbrks,
                        labels = ewlbls)+
-    scale_y_continuous(expand = c(0, 0),limits = c(30,90),
+    scale_y_continuous(expand = c(0, 0),limits = c(latmin,latmax),
                        breaks =nsbrks,
                        labels = nslbls)+
     # scale_x_continuous(expand = c(0, 0),limits = c(-180,180),

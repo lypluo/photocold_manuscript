@@ -100,51 +100,47 @@ library(grDevices)
 # map theme
 ############
 #can refer:http://www.sthda.com/english/wiki/ggplot2-themes-and-background-colors-the-3-elements
-theme_map <- 
-  # theme_dark() +    # theme_minimal()
-  theme(
-    #add by YP:
-    # panel.background = element_rect(fill = "gray60",
-    #                                 colour = "gray60",
-    #                                 size = 0.5, linetype = "solid"),
-    # #add by YP:
-    # plot.background = element_rect(fill="gray60"),
-    #
-    plot.title = element_text(hjust = 0, face="bold", size = 18),
-    
-    # legend.position = "right", # c(0.07, 0.35), #"left"
-    # legend.key.size = unit(c(5, 1), "mm"),
-    legend.title=element_text(size=12),
-    legend.text=element_text(size=10),
-    
-    # axis.line = element_blank(),
-    # axis.text = element_blank(),
-    # axis.title = element_blank(),
-    
-    # panel.grid.major = element_line(colour="black",size = 0.5,linetype = "solid"),
-    panel.grid.minor = element_blank(),
-    # plot.margin = unit( c(0, 0, 0, 5) , "mm")
-  )
-
-# define labels
-lat.labels <- seq(30, 90, 30)
-lat.short  <- seq(30, 90, 10)
-lon.labels <- seq(-180, 180, 60)
-lon.short  <- seq(-180, 180, 10)
-
-a <- sapply( lat.labels, function(x) if (x>0) {parse(text = paste0(x, "*degree ~ N"))} else if (x==0) {parse(text = paste0(x, "*degree"))} else {parse(text = paste0(-x, "*degree ~ S"))} )
-b <- sapply( lon.labels, function(x) if (x>0) {parse(text = paste0(x, "*degree ~ E"))} else if (x==0) {parse(text = paste0(x, "*degree"))} else {parse(text = paste0(-x, "*degree ~ W"))} )
-#update in March, 2022
-a<-expression("30°" ~ N, "60°" ~ N, "90°" ~ N)
-b<-expression("30°"  ~ W, "120°" ~ W, "60°" ~ W,"0°",
-              "60°" ~ E, "120°" ~ E, "180°" ~ E)
+# theme_map <- 
+#   # theme_dark() +    # theme_minimal()
+#   theme(
+#     #add by YP:
+#     # panel.background = element_rect(fill = "gray60",
+#     #                                 colour = "gray60",
+#     #                                 size = 0.5, linetype = "solid"),
+#     # #add by YP:
+#     # plot.background = element_rect(fill="gray60"),
+#     #
+#     plot.title = element_text(hjust = 0, face="bold", size = 18),
+#     
+#     # legend.position = "right", # c(0.07, 0.35), #"left"
+#     # legend.key.size = unit(c(5, 1), "mm"),
+#     legend.title=element_text(size=12),
+#     legend.text=element_text(size=10),
+#     
+#     # axis.line = element_blank(),
+#     # axis.text = element_blank(),
+#     # axis.title = element_blank(),
+#     
+#     # panel.grid.major = element_line(colour="black",size = 0.5,linetype = "solid"),
+#     panel.grid.minor = element_blank(),
+#     # plot.margin = unit( c(0, 0, 0, 5) , "mm")
+#   )
+# 
+# # define labels
+# lat.labels <- seq(30, 90, 30)
+# lat.short  <- seq(30, 90, 10)
+# lon.labels <- seq(-180, 180, 60)
+# lon.short  <- seq(-180, 180, 10)
+# 
+# a <- sapply( lat.labels, function(x) if (x>0) {parse(text = paste0(x, "*degree ~ N"))} else if (x==0) {parse(text = paste0(x, "*degree"))} else {parse(text = paste0(-x, "*degree ~ S"))} )
+# b <- sapply( lon.labels, function(x) if (x>0) {parse(text = paste0(x, "*degree ~ E"))} else if (x==0) {parse(text = paste0(x, "*degree"))} else {parse(text = paste0(-x, "*degree ~ W"))} )
+# #update in March, 2022
+# a<-expression("30°" ~ N, "60°" ~ N, "90°" ~ N)
+# b<-expression("30°"  ~ W, "120°" ~ W, "60°" ~ W,"0°",
+#               "60°" ~ E, "120°" ~ E, "180°" ~ E)
 #---------------------------------------------
 # 1. Create ggplot object
 #---------------------------------------------
-lonmin=-180
-lonmax=180
-latmin=30
-latmax=90
 #group=group-->results in the wrong map background:ask Beni's advices
 #something need to be paid attention-->to make sure the plot looks right
 #-->should set latmin=-90; latmax=90
@@ -161,7 +157,11 @@ latmax=90
 #   labs( x = "longtitude", y = "latitude")
 ##update in 2022,Oct-->using Beni' code (but revised it) to create a empty global map
 source("./R/plot_map_simpl_rev_YP.R")
-gg<-plot_map_simpl(-180,180,30,90)
+lonmin=-180
+lonmax=180
+latmin=30
+latmax=75  ##the latmax should slight >75 as the setting in the function
+gg<-plot_map_simpl(-180,180,30,80)
 #---------------------------------------------
 # 2. add sites information
 #---------------------------------------------
@@ -169,7 +169,9 @@ library(ggrepel)  #add the site labels
 barwidth = 1.5
 barheight = 2
 
+#--------------------------
 #figure format 1:barplot-->
+#--------------------------
 p_final<-gg+
   # geom_point(data=final_coord_sites,aes(x=lon,y=lat,shape=PFT,col=event_perc),size=4,pch=16)+
     geom_rect(data = final_coord_sites,
@@ -200,14 +202,17 @@ p_final<-gg+
 # ggsave(file=paste0(save.path,"FigureS_sites_distribution_with_barplots.png"),
 #        p_final,dev="png",width = 12,height=7)
 
+#--------------------------------------------
 #figure format 2:color for different bias-->
+#--------------------------------------------
 p_final<-gg+
   geom_point(data=final_coord_sites,aes(x=lon,y=lat,col=gpp_bias),size=4,pch=16)+
     scale_color_gradientn(expression ("GPP bias (g m"^-2*"d"^-1*")"),
     colours = c("blue", "white", "red"),
     values = c(0, 0.5, 1))+
     theme(legend.title = element_text(size=16),
-          legend.text = element_text(size=12))
+          legend.text = element_text(size=12),
+          legend.position = "none")
   # scale_fill_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   # geom_point(data=final_coord_sites%>% filter(event_perc==0),
   #            aes(x=lon,y=lat),size=2,pch=16,col="black")+
@@ -223,7 +228,37 @@ p_final<-gg+
   #                  max.overlaps = 50,label.size = 0.1,
   #                  arrow = arrow(ends = "first",length = unit(0.05,"inch")),
   #                  size = 2.8)
+ ##add the boxplot for different PFTs:
+p_bias_PFTs<-final_coord_sites%>%
+  ggplot(aes(x=classid,y=gpp_bias,col=gpp_bias))+
+  geom_boxplot(notch = F)+
+  # scale_color_gradientn(expression ("GPP bias (g m"^-2*"d"^-1*")"),
+  #                       colours = c("blue", "white", "red"),
+  #                       values = c(0, 0.5, 1))+
+  scale_color_gradientn("GPP bias",
+                        colours = c("blue", "white", "red"),
+                        values = c(0, 0.5, 1))+
+  ylab(expression("GPP bias (g m"^-2*"d"^-1*")"))+
+  xlab("")+
+  # geom_violin(notch = F)+
+  geom_jitter(position=position_jitter(0.2))+
+  theme(legend.title = element_text(size=16),
+        legend.text = element_text(size=12),
+        axis.title=element_text(size=16),
+        axis.text=element_text(size=18)
+        )
+#merge two plots:
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+#refer the links:
+# https://cran.r-project.org/web/packages/egg/vignettes/Ecosystem.html
+p_out<-grid.arrange(p_final,p_bias_PFTs,widths=c(5.8,3),heights=5:1)
+
+
 #save the plots
 save.path<-"./manuscript/figures/"
 ggsave(file=paste0(save.path,"Figure1_sites_distribution_with_colored_bias.png"),
-       p_final,dev="png",width = 12,height=7)
+       p_out,dev="png",width = 10.8,height=8)
+

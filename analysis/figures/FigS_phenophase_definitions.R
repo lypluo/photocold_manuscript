@@ -174,7 +174,7 @@ df_subset<-df_final[df_final$Year==2000,]
 #manually to define the doy to fulfill the demonstration purpose
 rect.coord_GS=data.frame(x1=df_subset$date[115],
                          x2=df_subset$date[198], 
-                         y1=min(df_subset$gpp_mod_norm,na.rm = T)-0.05, 
+                         y1=min(df_subset$gpp_mod_norm,na.rm = T), 
                          y2=max(df_subset$gpp_mod_norm,na.rm = T)+0.05)
 
 gg_plot<-ggplot() + 
@@ -187,30 +187,41 @@ gg_plot<-ggplot() +
   # geom_vline(xintercept = df_subset$date[115],col="forestgreen",lty=2,lwd=1.2)+
   geom_segment(aes(x=x1,y=y1,xend=x2,yend=y2),
                col="forestgreen",lty=2,lwd=1.1,
-               data = data.frame(x1=df_subset$date[115],y1= -0.05,
-                                 x2=df_subset$date[115],y2=0.18))+
+               data = data.frame(x1=df_subset$date[115],y1= 0,
+                                 x2=df_subset$date[115],y2=0.17))+
   # geom_vline(xintercept = df_subset$date[198],col="forestgreen",lty=2,lwd=1.2)+
   geom_segment(aes(x=x1,y=y1,xend=x2,yend=y2),
                col="forestgreen",lty=2,lwd=1.1,
-               data = data.frame(x1=df_subset$date[198],y1= -0.05,
+               data = data.frame(x1=df_subset$date[198],y1= 0,
                                  x2=df_subset$date[198],y2=1.05))+
   # geom_vline(xintercept = df_subset$date[300],col="forestgreen",lty=2,lwd=1.2)+
   geom_segment(aes(x=x1,y=y1,xend=x2,yend=y2),
                col="forestgreen",lty=2,lwd=1.1,
-               data = data.frame(x1=df_subset$date[300],y1= -0.05,
-                                 x2=df_subset$date[300],y2=0.18))+
-  labs(title = "", x = "DoY", y = "Norm GPP" )+  #(g C m-2 d-1 )
+               data = data.frame(x1=df_subset$date[295],y1= 0,
+                                 x2=df_subset$date[295],y2=0.17))+
+  labs(title = "", x = "DoY", y = "Normalized GPP" )+  #(g C m-2 d-1 )
   geom_rect(data=rect.coord_GS,mapping=aes(xmin=x1, xmax=x2, ymin=y1, ymax=y2), fill="green3",alpha=0.1)+
   #
-  geom_hline(yintercept = c(0,1.1),col=adjustcolor("grey",0.5),size=1.05,lty=2)+
-  ##adding the amplitude-->working here-->tomorrow working!!!
-  
-  
+  geom_hline(yintercept = c(0,1.05),col=adjustcolor("grey",0.5),size=1.05,lty=2)+
+  #adding the amplitude:
+  geom_curve(aes(x=x1,y=y1,xend=x2,yend=y2),
+             col="black",lty=2,lwd=1,
+             data = data.frame(x1=df_subset$date[320],y1= 0.6,
+                               x2=df_subset$date[320],y2=1.05),
+             curvature = 0.0,
+             arrow = arrow(length = unit(0.05,"npc")),angle = 10)+
+  geom_curve(aes(x=x1,y=y1,xend=x2,yend=y2),
+             col="black",lty=2,lwd=1,
+             data = data.frame(x1=df_subset$date[320],y1= 0.5,
+                               x2=df_subset$date[320],y2=0),
+             curvature = 0.0,
+             arrow = arrow(length = unit(0.05,"npc")),angle = 10)+
   #adding text:
-  annotate(geom = "text",x=df_subset$date[160],y=0,label="PRP",size=6)+
-  annotate(geom = "text",x=c(df_subset$date[95],df_subset$date[215],df_subset$date[318]),
-           y=rep(0.2,3),label=c("SOS","POS","EOS"),size=4)+
-  ylim(-0.05,1.16)+
+  annotate(geom = "text",x=df_subset$date[160],y=0.4,label="PRP",size=6)+
+  annotate(geom = "text",x=c(df_subset$date[115],df_subset$date[198],df_subset$date[295]),
+           y=rep(-0.04,3),label=c("SOS","POS","EOS"),size=4)+
+  annotate(geom="text",x=df_subset$date[320],y=0.55,label="Amplitude",size=4)+
+  ylim(-0.05,1.2)+
   theme_classic()+
   theme(axis.ticks.x = element_blank(),
         axis.text.x  = element_blank(),
@@ -219,4 +230,5 @@ gg_plot<-ggplot() +
     legend.background = element_blank())
 #
 save.path<-"./manuscript/test_files/phenophase_definition/"
-ggsave(paste0(save.path,"gpp_phenophase_define.png"),gg_plot)
+ggsave(paste0(save.path,"gpp_phenophase_define.png"),gg_plot,height = 6,width = 8)
+

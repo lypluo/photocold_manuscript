@@ -210,6 +210,7 @@ p_final<-gg+
     scale_color_gradientn(expression ("GPP bias (g m"^-2*"d"^-1*")"),
     colours = c("blue", "white", "red"),
     values = c(0, 0.5, 1))+
+     annotate(geom = "text",x=-160,y=75,label="a",size=6)+
     theme(legend.title = element_text(size=16),
           legend.text = element_text(size=12),
           legend.position = "none")
@@ -240,6 +241,7 @@ p_bias_PFTs<-final_coord_sites%>%
                         values = c(0, 0.5, 1))+
   ylab(expression("GPP bias (g m"^-2*"d"^-1*")"))+
   xlab("")+
+  annotate(geom = "text",x=0.6,y=2.5,label="b",size=6)+
   # geom_violin(notch = F)+
   geom_jitter(position=position_jitter(0.2))+
   theme(legend.title = element_text(size=16),

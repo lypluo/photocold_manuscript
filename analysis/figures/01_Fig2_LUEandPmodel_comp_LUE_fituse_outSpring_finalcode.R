@@ -13,6 +13,7 @@ library(tidyverse)
 library(ingestr)
 devtools::load_all("D:/Github/rbeni/")
 library(rbeni)
+library(plotrix) #calculate the standard error 
 
 #-----------------
 #(1) tidy up the data
@@ -231,7 +232,7 @@ plot_sites<-df_meandoy_norm %>%
   facet_wrap( ~sitename) +
   # theme_gray() +
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-    "gpp_pmodel" = "orange","gpp_lmer"="grey"),
+    "gpp_pmodel" = "orange","gpp_lmer"=adjustcolor("brown2",0.8)),
     labels = c(expression(GPP[obs]),expression(GPP[Pmodel]),expression(GPP[LME])))+
     # labels = c("Obervations","P-model","LME"))+
   # scale_color_manual(
@@ -301,8 +302,26 @@ sites.info%>%
 
 df_meandoy_norm_Clim_PFTs <- ddf_norm %>%
   filter(sitename!="JP-MBF" & sitename!="US-NR1" & sitename!="US-PFa")%>% ##remove the sites do not performed when lmer
+  #update in May, 2023:adding the gpp_bias
+  mutate(gpp_bias_pmodel=gpp_pmodel - gpp_obs,gpp_bias_lmer=gpp_lmer - gpp_obs,
+         )%>%
   group_by(Clim_PFTs, doy) %>% 
-  dplyr::summarise(across(starts_with("gpp_"), mean, na.rm = TRUE))
+  dplyr::summarise(gpp_obs_min=min(gpp_obs,na.rm = T),gpp_obs_max=max(gpp_obs,na.rm = T),
+    gpp_obs_sd=sd(gpp_obs,na.rm = T),gpp_obs_mean=mean(gpp_obs,na.rm=T),
+    #add sos_mean and eos_mean
+    sos_mean=round(mean(sos,na.rm=T),0),peak_min=round(min(peak,na.rm=T),0),
+    across(starts_with("gpp_"), mean, na.rm = TRUE),)%>%
+  #add in May,2023
+  mutate(avg_period = ifelse(doy >= sos_mean & doy <=peak_min, TRUE, FALSE))
+##following the Wolfhart's suggestion, adding the mean bias betweeen model and obs->add May,2023
+gpp_mean_bias<-df_meandoy_norm_Clim_PFTs%>%
+  filter(avg_period==TRUE)%>%
+  group_by(Clim_PFTs)%>%
+  dplyr::summarise(gpp_bias_pmodel_greenup=mean(gpp_bias_pmodel,na.rm=T),
+                   gpp_bias_lmer_greenup=mean(gpp_bias_lmer,na.rm=T))
+#merge gpp_mean_bias to datasets:
+df_meandoy_norm_Clim_PFTs<-left_join(df_meandoy_norm_Clim_PFTs,
+          gpp_mean_bias)
 
 #Figure for Clim.-PFTs
 plot_final<-df_meandoy_norm_Clim_PFTs %>% 
@@ -312,6 +331,14 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel","gpp_lmer"))) %>% ##select only one lm
   ggplot() +
   geom_line(aes(x = doy, y = gpp, color = model),size=0.8) +
+  geom_ribbon(aes(x=doy,ymin=gpp_obs_mean - gpp_obs_sd,ymax=gpp_obs_mean + gpp_obs_sd),fill="black",alpha=0.3)+
+  #adding the gpp bias-->May,2023:
+  geom_segment(aes(x=120,y=0,xend=120+gpp_bias_pmodel_greenup*50,yend=0),col="orange",size=1.1)+
+  geom_segment(aes(x=120,y=-1,xend=120+gpp_bias_lmer_greenup*50,yend=-1),col="brown2",size=1.1)+
+  geom_segment(aes(x=120,y=-1.8,xend=120,yend=0.8),col=adjustcolor("black",0.8),size=1.02)+
+  #adding the bias value:
+  geom_text(aes(x=160,y=2,label=round(gpp_bias_pmodel_greenup,2)))+
+  geom_text(aes(x=160,y=-2,label=round(gpp_bias_lmer_greenup,2)))+
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
   # facet_wrap( ~Clim_PFTs, ncol = 3, scales = "free_y" ) +
@@ -322,7 +349,7 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   #   name="Model: ",
   #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
   scale_color_manual("GPP sources",values = c("gpp_obs" = "black",
-     "gpp_pmodel" = "orange", "gpp_lmer" = "grey"),
+     "gpp_pmodel" = "orange", "gpp_lmer" = "brown2"),
      labels = c(expression(GPP[obs]),expression(GPP[Pmodel]),expression(GPP[LME])))+
      # labels = c("Observations","P-model","LME")) +
   theme(

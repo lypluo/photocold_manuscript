@@ -140,8 +140,6 @@ noevent_siteyears<-df_len5_nonnorm$df_noevent_dday %>%
   mutate(site_years=paste0(sitename,Year))
 length(unique(noevent_siteyears$site_years))
 
-
-
 #-------------------------------------------------------------------------
 #(3)calculating some important variables like LUE...
 #-------------------------------------------------------------------------
@@ -389,7 +387,7 @@ p_gpp_obs_len5_b60<-plot_2groups(df_len5_nonnorm,"gpp_obs","(umol m-2 s-1)",do_n
 #gpp biaes
 p_gpp_biaes_len5_b60<-plot_2groups(df_len5_nonnorm,"gpp_res","(umol m-2 s-1)",do_norm = FALSE,FALSE)
 #LUE
-p_LUE_len5_b60<-plot_2groups(df_len5_nonnorm,"LUE","",do_norm = FALSE,FALSE)
+p_LUE_len5_b60<-plot_2groups(df_len5_nonnorm,"LUE","",do_norm = FALSE,TRUE)
 #for ppfd: change the "ppfd_fluxnet2015" to "PPFD_IN_fullday_mean_fluxnet2015"
 # p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
 p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"PPFD_IN_fullday_mean_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
@@ -407,7 +405,8 @@ p_ppfd_len5_b60$plot<-p_ppfd_len5_b60$plot+
   ylab(expression("PAR"*" (u mol "*"m"^-2*" s"^-1*")"))
 p_fapar_itpl_len5_b60$plot<-p_fapar_itpl_len5_b60$plot+
   xlab("")+
-  ylab("fapar")
+  ylim(0.1,1)+
+  ylab("fAPAR")
 #--------------
 #II.Environment variables
 #note by YP 2021-11-21:
@@ -437,7 +436,7 @@ p_SWC_1_len5_b60<-plot_2groups(df_len5_nonnorm,"SWC_1_fluxnet2015","(%)",do_norm
 #some modifying in the plot:
 p_temp_min_len5_b60$plot<-p_temp_min_len5_b60$plot+
   ylab(expression("T"[min]*" (°C)"))+
-  ylim(-30,25)
+  ylim(-30,10)
 p_temp_day_len5_b60$plot<-p_temp_day_len5_b60$plot+
   ylab(expression("T"[mean]*" (°C)"))+
   ylim(-20,25)
@@ -488,7 +487,6 @@ p_albedo_SW_len5_b60$plot<-p_albedo_SW_len5_b60$plot+
   
 #albedo_ppfd
 p_albedo_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"alpha_PPFD","",do_norm = FALSE,TRUE)
-
 
 ##########PhenoCam############
 #gcc_90
@@ -558,15 +556,21 @@ p_merge_new<-plot_grid(
 #need to note-->we only use the first layer Tsoil-->
 #if all the layer Tsoil are available, the results might be different
 p_merge_1<-plot_grid(
-  p_ppfd_len5_b60$plot,p_temp_min_len5_b60$plot,
+  p_LUE_len5_b60$plot,
+  #update in May, 2023:
+  p_fapar_itpl_len5_b60$plot,
+  p_ppfd_len5_b60$plot,
+  p_temp_min_len5_b60$plot,
   p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
-  labels = "auto",ncol=2,label_size = 18,align = "hv"
+  labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure3_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,width = 15,height = 12)
+ggsave(paste0(save.path,"Figure3_LUE_fAPAR_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,width = 15,height = 12)
 
 #Figure Sxx:
 p_merge_S<-plot_grid(
   p_temp_day_len5_b60$plot,p_temp_max_len5_b60$plot,
+  #update in May,2023
+  p_LUE_len5_b60$plot,
   labels = "auto",ncol=2,label_size = 18,align = "hv"
 )
 ggsave(paste0(save.path,"FigureS_other_drivers.png"),p_merge_S,width = 15,height = 8)

@@ -303,14 +303,13 @@ sites.info%>%
 df_meandoy_norm_Clim_PFTs <- ddf_norm %>%
   filter(sitename!="JP-MBF" & sitename!="US-NR1" & sitename!="US-PFa")%>% ##remove the sites do not performed when lmer
   #update in May, 2023:adding the gpp_bias
-  mutate(gpp_bias_pmodel=gpp_pmodel - gpp_obs,gpp_bias_lmer=gpp_lmer - gpp_obs,
-         )%>%
+  mutate(gpp_bias_pmodel=gpp_pmodel - gpp_obs,gpp_bias_lmer=gpp_lmer - gpp_obs)%>%
   group_by(Clim_PFTs, doy) %>% 
   dplyr::summarise(gpp_obs_min=min(gpp_obs,na.rm = T),gpp_obs_max=max(gpp_obs,na.rm = T),
     gpp_obs_sd=sd(gpp_obs,na.rm = T),gpp_obs_mean=mean(gpp_obs,na.rm=T),
     #add sos_mean and eos_mean
     sos_mean=round(mean(sos,na.rm=T),0),peak_min=round(min(peak,na.rm=T),0),
-    across(starts_with("gpp_"), mean, na.rm = TRUE),)%>%
+    across(starts_with("gpp_"), mean, na.rm = TRUE))%>%
   #add in May,2023
   mutate(avg_period = ifelse(doy >= sos_mean & doy <=peak_min, TRUE, FALSE))
 ##following the Wolfhart's suggestion, adding the mean bias betweeen model and obs->add May,2023
@@ -337,7 +336,7 @@ plot_final<-df_meandoy_norm_Clim_PFTs %>%
   geom_segment(aes(x=120,y=-1,xend=120+gpp_bias_lmer_greenup*50,yend=-1),col="brown2",size=1.1)+
   geom_segment(aes(x=120,y=-1.8,xend=120,yend=0.8),col=adjustcolor("black",0.8),size=1.02)+
   #adding the bias value:
-  geom_text(aes(x=160,y=2,label=round(gpp_bias_pmodel_greenup,2)))+
+  geom_text(aes(x=160,y=1,label=round(gpp_bias_pmodel_greenup,2)))+
   geom_text(aes(x=160,y=-2,label=round(gpp_bias_lmer_greenup,2)))+
   labs(y = expression( paste("GPP (g C m"^-2, " d"^-1, ")" ) ),
        x = "DoY") +
@@ -393,3 +392,4 @@ plot_final_addN<-tag_facet(plot_final,x=sites_num.info$doy,y=sites_num.info$gpp,
                            tag_pool = sites_num.info$label,size=5)
 #
 ggsave("./manuscript/figures/Figure2_gpp_meandoy_norm_forClimPFTs.png",plot_final_addN,width = 15,height = 10)
+

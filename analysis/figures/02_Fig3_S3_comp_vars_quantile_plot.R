@@ -390,7 +390,7 @@ p_gpp_biaes_len5_b60<-plot_2groups(df_len5_nonnorm,"gpp_res","(umol m-2 s-1)",do
 p_LUE_len5_b60<-plot_2groups(df_len5_nonnorm,"LUE","",do_norm = FALSE,TRUE)
 #for ppfd: change the "ppfd_fluxnet2015" to "PPFD_IN_fullday_mean_fluxnet2015"
 # p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
-p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"PPFD_IN_fullday_mean_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
+p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"PPFD_IN_fullday_mean_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = FALSE)
 #fapar_spl and fapar_itpl
 p_fapar_itpl_len5_b60<-plot_2groups(df_len5_nonnorm,"fapar_itpl","",do_norm = FALSE,do_legend = FALSE)
 #some modifying in the plot:
@@ -564,7 +564,8 @@ p_merge_1<-plot_grid(
   p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
   labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure3_LUE_fAPAR_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,width = 15,height = 12)
+ggsave(paste0(save.path,"Figure3_LUE_fAPAR_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,
+       width = 15,height = 10)
 
 #Figure Sxx:
 p_merge_S<-plot_grid(

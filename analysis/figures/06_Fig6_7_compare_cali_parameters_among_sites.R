@@ -262,13 +262,13 @@ para_sites<-ggplot(data=data_sel_final[data_sel_final$flag=="site",],
   # theme(legend.position = c(0.75,0.18),
   theme(
         legend.background = element_blank(),
-        legend.title = element_text(size=24),
-        legend.text = element_text(size=22),
-        axis.title = element_text(size=24),
-        axis.text.y = element_text(size=22),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.text.y = element_text(size=16),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        strip.text.x = element_text(size = 22)) ##change the facet label size
+        strip.text.x = element_text(size = 18)) ##change the facet label size
 ##add the a,b,c indicate the panels:
 dat_text<-data.frame(label=c("a","b","c"),parameter=c("tau","X0","Smax"),
                      PFT=rep("DBF",3),
@@ -286,9 +286,11 @@ library(colorspace)
 para_sites<-para_sites+
   # scale_fill_discrete_sequential(palette = "Viridis",alpha=0.5)+
   # scale_color_discrete_sequential(palette = "Viridis",alpha = 0.5)
-  scale_fill_manual(values = c("DBF"=adjustcolor("orange",alpha.f =0.2),
-        "MF"=adjustcolor("cyan",alpha.f =0.2),"ENF"=adjustcolor("magenta",alpha.f =0.2)))+
-  scale_color_manual(values = c("DBF"="orange","MF"="cyan2","ENF"="magenta3"))
+  khroma::scale_color_highcontrast(aesthetics = "fill")+
+  khroma::scale_color_highcontrast(aesthetics = "color")
+  # scale_fill_manual(values = c("DBF"=adjustcolor("orange",alpha.f =0.2),
+  #       "MF"=adjustcolor("cyan",alpha.f =0.2),"ENF"=adjustcolor("magenta",alpha.f =0.2)))+
+  # scale_color_manual(values = c("DBF"="orange","MF"="cyan2","ENF"="magenta3"))
 #---------------------------------------------
 #:
 tag_facet <- function(p, open = "", close = "", tag_pool = letters, x = -Inf, y = Inf, 
@@ -317,7 +319,9 @@ paras_PFTs_new[paras_PFTs_new$PFT=="DBF",]$x<-0.75
 paras_PFTs_new[paras_PFTs_new$PFT=="ENF",]$x<-1.25
 ##
 paras_PFTs_new$label<-rep("*",nrow(paras_PFTs_new))
-paras_PFTs_new$col<-c(rep("goldenrod",3),rep("cyan2",3),rep("magenta3",3))
+# paras_PFTs_new$col<-c(rep("goldenrod",3),rep("cyan2",3),rep("magenta3",3))
+paras_PFTs_new$col<-c(rep("darkblue",3),rep("orange",3),rep("tomato",3))
+
 #
 # paras_PFTs_new$PFT<-factor(paras_PFTs_new$PFT,levels = c("DBF","MF","ENF"))
 # paras_PFTs_new$parameter<-factor(paras_PFTs_new$parameter,levels = c("tau","X0","Smax"))
@@ -337,7 +341,7 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   # df_meteo<-df_final_new
   # df_paras<-data_sel_final
   # Env_var<-"tmin"
-  # para<-"X0"
+  # para<-"tau"
   # do_legend=FALSE
   # for example: Tmean vs tau
   #I.site-level
@@ -383,10 +387,10 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
   stat_Dfc_ENF_label<-data.frame(r.squared=round(stat_lm_Dfc_ENF$r.squared,2),
                          p.value=round(coef(stat_lm_Dfc_ENF)[2,4],4))
   
-  pars_final<-ggplot()+
-    geom_point(data=df_site_level_new,aes(x=Env_var,y=para,col=PFT),size=3)+
+  pars_final<-ggplot(data=df_site_level_new,aes(x=Env_var,y=para))+
+    geom_point(aes(col=PFT),size=3)+
     # scale_color_discrete_sequential(palette = "Viridis")+
-    geom_text_repel(data=df_site_level_new,aes(x=Env_var,y=para,label=sitename),size=5)+
+    geom_text_repel(aes(label=sitename),size=5)+
     #!update in Jan,2023: stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
     #             aes(x=Env_var,y=para,col=PFT),
     #             fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2)+
@@ -419,7 +423,8 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     #     aes(x=Env_var,y=para,label=Clim.PFTs,group=Clim.PFTs,col=PFT),label.fill = "magenta1",
     #     con.border = "one",con.cap = 0,con.size = 1.1,con.colour = "magenta1",
     #     con.arrow = grid::arrow(angle=30,ends = "last",length = unit(0.1,"inches")))+  ##Dfc-ENF
-    scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+    # scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+    khroma::scale_color_highcontrast(aesthetics = "color")+
     xlab(paste0(Env_var," (°C)"))+
     ylab(paste0(para," (°C)"))+
     xlim(-10,15)+
@@ -439,31 +444,31 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     pars_final<-pars_final+
     stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
                      aes(x=Env_var,y=para,col=PFT),
-                     fill=adjustcolor("goldenrod1"),method = "lm",formula = y ~ x,lty=2,
+                     fill=adjustcolor("steelblue2"),method = "lm",formula = y ~ x,lty=2,
                      show_guide=FALSE)+
     stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
-                     aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("magenta1"),
+                     aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("gold"),
                      method = "lm",formula = y ~ x,lty=2,
                      show_guide = FALSE)+
     annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
-                      stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
+                      stat_DBF_label$r.squared),parse=TRUE,col="steelblue4",size=7)+
     annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",
-                      round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
+                      round(stat_DBF_label$p.value,2)),parse=TRUE,col="steelblue4",size=7)+
     annotate(geom = "text",x=10.1,y=22,label = paste0("italic(R) ^ 2 == ",
-                      stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta",size=5)+
+                      stat_Dfc_ENF_label$r.squared),parse=TRUE,col="goldenrod3",size=7)+
     annotate(geom = "text",x=14,y=22,label = paste0("italic(p) == ",
-                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta",size=5)
+                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="goldenrod3",size=7)
   }
   if(para=="X0"){
     pars_final<-pars_final+
       annotate(geom = "text",x=10.1,y=5,label = paste0("italic(R) ^ 2 == ",
-                     stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
+                     stat_DBF_label$r.squared),parse=TRUE,col="steelblue4",size=7)+
       annotate(geom = "text",x=14,y=5,label = paste0("italic(p) ==",
-                     round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
+                     round(stat_DBF_label$p.value,2)),parse=TRUE,col="steelblue4",size=7)+
       annotate(geom = "text",x=10.1,y=4,label = paste0("italic(R) ^ 2 == ",
-                     stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta1",size=5)+
+                     stat_Dfc_ENF_label$r.squared),parse=TRUE,col="goldenrod3",size=7)+
       annotate(geom = "text",x=14,y=4,label = paste0("italic(p) == ",
-                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
+                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="goldenrod3",size=7)
   }
   if(para=="Smax"){
     pars_final<-pars_final+
@@ -476,13 +481,13 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
       #                method = "lm",formula = y ~ x,lty=2,
       #                show_guide = FALSE)+
       annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
-                     stat_DBF_label$r.squared),parse=TRUE,col="orange",size=5)+
+                     stat_DBF_label$r.squared),parse=TRUE,col="steelblue4",size=7)+
       annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",
-                     round(stat_DBF_label$p.value,2)),parse=TRUE,col="orange",size=5)+
+                     round(stat_DBF_label$p.value,2)),parse=TRUE,col="steelblue4",size=7)+
       annotate(geom = "text",x=10.1,y=22.5,label = paste0("italic(R) ^ 2 == ",
-                     stat_Dfc_ENF_label$r.squared),parse=TRUE,col="magenta1",size=5)+
+                     stat_Dfc_ENF_label$r.squared),parse=TRUE,col="goldenrod3",size=7)+
       annotate(geom = "text",x=14,y=22.5,label = paste0("italic(p) == ",
-                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="magenta1",size=5)
+                     round(stat_Dfc_ENF_label$p.value,2)),parse=TRUE,col="goldenrod3",size=7)
   }
   
   if(do_legend==FALSE){

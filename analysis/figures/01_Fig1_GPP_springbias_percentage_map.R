@@ -242,6 +242,7 @@ p_bias_PFTs<-final_coord_sites%>%
   ylab(expression("GPP bias (g m"^-2*"d"^-1*")"))+
   xlab("")+
   annotate(geom = "text",x=0.6,y=2.5,label="b",size=6)+
+  geom_hline(yintercept = 0,lty=2)+
   # geom_violin(notch = F)+
   geom_jitter(position=position_jitter(0.2))+
   theme(legend.title = element_text(size=16),

@@ -12,7 +12,7 @@ library(ggplot2)
 library(tidyr)
 library(lme4)
 library(tidyverse)
-# remotes::install_github("computationales/ingestr") #install the package
+# remotes::install_github("geco-bern/ingestr") #install the package
 library(ingestr)
 devtools::load_all("D:/Github/rbeni/")
 library(rbeni)

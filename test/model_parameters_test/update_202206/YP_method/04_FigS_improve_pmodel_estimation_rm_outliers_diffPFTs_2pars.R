@@ -10,7 +10,7 @@ library(tidyverse)
 library(dplyr)
 library(GenSA)
 library(lubridate)
-# remotes::install_github("computationales/ingestr") #install the package
+# remotes::install_github("geco-bern/ingestr") #install the package
 library(ingestr)
 #-------------------------
 #(1)load the data and hardening funciton

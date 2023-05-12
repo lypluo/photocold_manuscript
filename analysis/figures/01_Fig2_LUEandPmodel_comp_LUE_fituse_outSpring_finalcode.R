@@ -11,7 +11,7 @@ library(lme4)
 library(tidyverse)
 # remotes::install_github("computationales/ingestr") #install the package
 library(ingestr)
-devtools::load_all("D:/Github/rbeni/")
+# devtools::load_all("D:/Github/rbeni/")
 library(rbeni)
 library(plotrix) #calculate the standard error 
 
@@ -172,9 +172,149 @@ df_meandoy %>%
 
 # ggsave("./manuscript/test_files/gpp_meandoy.pdf", height = 25, width = 8)
 
-##############################
-## Normalise to peak season
-##############################
+# Residual analysis for reply to reviewer 1 ----------------------------
+tmp <- ddf |> 
+  mutate(res_pmodel = gpp_pmodel - gpp_obs,
+         res_lmm = gpp_lmer - gpp_obs) |> 
+  mutate(doy = lubridate::yday(date)) |> 
+  mutate(spring = ifelse(doy < 365/2, TRUE, FALSE)) |> 
+  mutate(fapar_bin = cut(fapar_itpl, breaks = seq(0, 1, by = 0.1)))
+
+tmp_agg <- tmp |> 
+  group_by(sitename, fapar_bin, spring) |> 
+  summarise(res_pmodel = mean(res_pmodel, na.rm = TRUE)) |> 
+  pivot_wider(names_from = c("spring"), values_from = "res_pmodel") |> 
+  mutate(diff_spring = `TRUE` - `FALSE`) |> 
+  ungroup() |> 
+  group_by(sitename) |> 
+  summarise(diff_spring = mean(diff_spring, na.rm = TRUE))
+
+plot_1 <- ggplot(
+  data = tmp_agg,
+  aes(x = sitename, y = diff_spring)) +
+  geom_bar(stat = "identity") +
+  labs(y = expression( paste("Mean difference in spring vs rest bias within fAPAR bin (g C m"^-2, " d"^-1, ")" ) ),
+       x = "") +
+  theme_classic() +
+  coord_flip()
+
+
+## Residual vs fAPAR bin by site -----------------
+### P-model bias ----------------
+tmp |> 
+  filter(sitename %in% unique(tmp$sitename)[1:18]) |> 
+  ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  labs() +
+  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_1.png", width = 12, height = 18)
+
+#### Example ----------
+gg1 <- tmp |> 
+  filter(sitename %in% c("US-UMd", "IT-Ren")) |> 
+  ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  labs() +
+  labs(y = expression( paste("P-model GPP bias (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+
+gg2 <- tmp |> 
+  filter(sitename %in% c("US-UMd", "IT-Ren")) |> 
+  ggplot(aes(x = fapar_bin, y = res_lmm, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  labs() +
+  labs(y = expression( paste("LMM GPP bias (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+
+cowplot::plot_grid(gg1, gg2, ncol = 1, labels = c("a", "b"))
+ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.pdf", width = 12, height = 10)
+ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.png", width = 12, height = 10)
+
+
+tmp |> 
+  filter(sitename %in% unique(tmp$sitename)[19:length(unique(tmp$sitename))]) |> 
+  ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  labs() +
+  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_2.png", width = 12, height = 18)
+
+### LMM model bias ------------------
+tmp |> 
+  filter(sitename %in% unique(tmp$sitename)[1:18]) |> 
+  ggplot(aes(x = fapar_bin, y = res_lmm, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  labs() +
+  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+ggsave("./manuscript/figures/FigADD_residual_fapar_lmm_1.png", width = 12, height = 18)
+
+tmp |> 
+  filter(sitename %in% unique(tmp$sitename)[19:length(unique(tmp$sitename))]) |> 
+  ggplot(aes(x = fapar_bin, y = res_lmm, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  labs() +
+  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+ggsave("./manuscript/figures/FigADD_residual_fapar_lmm_2.png", width = 12, height = 18)
+
+
+## Difference between spring and autumn bias across sites
+tmp |> 
+  ggplot(aes(x = sitename, y = res_pmodel, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  coord_flip()
+  
+
+# Normalise to peak season ----------------------------
 norm_to_peak <- function(df, mod, obs){
   # df<-ddf_t
   # mod<-"gpp_lmer"
@@ -211,9 +351,9 @@ df_meandoy_norm <- ddf_norm %>%
   group_by(sitename, doy) %>% 
   dplyr::summarise(across(starts_with("gpp_"), mean, na.rm = TRUE))
 
-plot_sites<-df_meandoy_norm %>% 
+plot_sites <- df_meandoy_norm %>% 
   filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
-  pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd,gpp_lmer), names_to = "model", values_to = "gpp") %>%
+  pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd, gpp_lmer), names_to = "model", values_to = "gpp") %>%
   mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd","gpp_lmer")) %>%
   dplyr::filter((model %in% c( "gpp_obs", "gpp_pmodel","gpp_lmer"))) %>%  ##only select one model
   # pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd), names_to = "model", values_to = "gpp") %>% 
@@ -256,8 +396,9 @@ theme(legend.text.align = 0)  #align the legend (all the letter start at the sam
 ggsave("./manuscript/figures/FigS_eachsite_gpp_meandoy_norm.png",width = 20,height = 20)
 
 ####################
-#(5)prepare the official plots:
-#using norm_GPP results
+# Publication figure ------------------------------
+# (5) prepare the official plots:
+# using norm_GPP results
 ####################
 #----------------Figure :plotting for 
 #load the site infos:
@@ -305,25 +446,33 @@ df_meandoy_norm_Clim_PFTs <- ddf_norm %>%
   #update in May, 2023:adding the gpp_bias
   mutate(gpp_bias_pmodel=gpp_pmodel - gpp_obs,gpp_bias_lmer=gpp_lmer - gpp_obs)%>%
   group_by(Clim_PFTs, doy) %>% 
-  dplyr::summarise(gpp_obs_min=min(gpp_obs,na.rm = T),gpp_obs_max=max(gpp_obs,na.rm = T),
-    gpp_obs_sd=sd(gpp_obs,na.rm = T),gpp_obs_mean=mean(gpp_obs,na.rm=T),
+  dplyr::summarise(
+    gpp_obs_min=min(gpp_obs,na.rm = T),
+    gpp_obs_max=max(gpp_obs,na.rm = T),
+    gpp_obs_sd=sd(gpp_obs,na.rm = T),
+    gpp_obs_mean=mean(gpp_obs,na.rm=T),
     #add sos_mean and eos_mean
-    sos_mean=round(mean(sos,na.rm=T),0),peak_min=round(min(peak,na.rm=T),0),
-    across(starts_with("gpp_"), mean, na.rm = TRUE))%>%
+    sos_mean=round(mean(sos,na.rm=T),0),
+    peak_min=round(min(peak,na.rm=T),0),
+    fapar = mean(fapar_itpl, na.rm = TRUE),
+    across(starts_with("gpp_"), mean, na.rm = TRUE)) %>%
+  
   #add in May,2023
-  mutate(avg_period = ifelse(doy >= sos_mean & doy <=peak_min, TRUE, FALSE))
-##following the Wolfhart's suggestion, adding the mean bias betweeen model and obs->add May,2023
-gpp_mean_bias<-df_meandoy_norm_Clim_PFTs%>%
+  mutate(avg_period = ifelse(doy >= sos_mean & doy <= peak_min, TRUE, FALSE))
+
+##following the Wolfhart's suggestion, adding the mean bias betweeen model and obs -> add May,2023
+gpp_mean_bias <- df_meandoy_norm_Clim_PFTs%>%
   filter(avg_period==TRUE)%>%
   group_by(Clim_PFTs)%>%
   dplyr::summarise(gpp_bias_pmodel_greenup=mean(gpp_bias_pmodel,na.rm=T),
                    gpp_bias_lmer_greenup=mean(gpp_bias_lmer,na.rm=T))
+
 #merge gpp_mean_bias to datasets:
 df_meandoy_norm_Clim_PFTs<-left_join(df_meandoy_norm_Clim_PFTs,
           gpp_mean_bias)
 
 #Figure for Clim.-PFTs
-plot_final<-df_meandoy_norm_Clim_PFTs %>% 
+plot_final <- df_meandoy_norm_Clim_PFTs %>% 
   filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
   pivot_longer(c(gpp_obs, gpp_pmodel, gpp_lue_const, gpp_temp_vpd,gpp_lmer), names_to = "model", values_to = "gpp") %>%
   mutate(model = fct_relevel(model, "gpp_obs", "gpp_pmodel", "gpp_lue_const", "gpp_temp_vpd","gpp_lmer")) %>%
@@ -392,4 +541,30 @@ plot_final_addN<-tag_facet(plot_final,x=sites_num.info$doy,y=sites_num.info$gpp,
                            tag_pool = sites_num.info$label,size=5)
 #
 ggsave("./manuscript/figures/Figure2_gpp_meandoy_norm_forClimPFTs.png",plot_final_addN,width = 15,height = 10)
+
+
+# Residual analysis for reply to reviewer 1 ----------------------------
+tmp <- df_meandoy_norm_Clim_PFTs |> 
+  mutate(res_pmodel = gpp_pmodel - gpp_obs,
+         res_lmm = gpp_lmer - gpp_obs) |> 
+  mutate(spring = ifelse(doy < 365/2, TRUE, FALSE)) |> 
+  mutate(fapar_bin = cut(fapar, breaks = seq(0, 1, by = 0.1)))
+
+## Residual vs fAPAR bin Clim-PFT -----------------
+### P-model bias ----------------
+tmp |> 
+  ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~Clim_PFTs, ncol = 2 ) +
+  labs() +
+  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR bin") +
+  theme_classic()
+
+ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_ClimPFT.png", width = 12, height = 12)
 

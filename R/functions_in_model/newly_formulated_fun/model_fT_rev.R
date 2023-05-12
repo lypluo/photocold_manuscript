@@ -42,7 +42,7 @@ f_Ts_rev<-function(df,
     #2):S-->state of acclimation
     #---------
     # S[idx]<-max(0, (X[idx] - par["X0"]))
-      S<-max(0, (X[idx] - par["X0"]))
+    S<-max(0, (X[idx] - par["X0"]))
     #-----------
     #3):f_stress:modifying factor for low temperature
     #-----------
@@ -53,8 +53,6 @@ f_Ts_rev<-function(df,
     ## allow for higher mid-season GPP after down-scaling early season GPP
     ## set different scaler at different period
     #between 4-01(from April air temperature starts >0) and 9-22(autumn equinox)
-    #:k1-->no T limitation
-    #other period:k0
     #---------
     if(df$doy[idx]>121 & df$doy[idx]<266){
       f_stress[idx] <- f_stress_temp*par["k"]

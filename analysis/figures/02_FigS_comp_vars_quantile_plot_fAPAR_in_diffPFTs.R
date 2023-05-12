@@ -1,6 +1,8 @@
 #############################################################################
 #Aim:compare the variables in "event" and "non-event" site years after aligning the data-->specifically for Temp
 library(dplyr)
+library(lubridate)
+library(tidyverse)
 #-------------------------------------------------------------------------
 #(1)load the data that includes the "is_event" information
 #-------------------------------------------------------------------------
@@ -29,7 +31,7 @@ sep_siteyears<-function(df,sep_var,sep_thrs){
   return(df_new)
 }
 ##separate the site-year when the over_days_length > 20 days
-df.sep35<-sep_siteyears(df_events_all,"Over_days_length",30)
+df.sep30<-sep_siteyears(df_events_all,"Over_days_length",30)
 #---------------------
 #B.load the data 
 #---------------------
@@ -47,6 +49,25 @@ sites.info<-df_sites_sel;rm(df_sites_sel)
 df_norm_all<-left_join(df_norm_all,sites.info)
 df_norm_all<-df_norm_all %>%
   mutate(Clim_PFTs=paste0(koeppen_code,"-",classid))
+#
+##-->update in May,2023-->also add the snow data from modis
+snow.path<-"./data-raw/raw_data/snow_data/"
+load(paste0(snow.path,"snow_MOD.RDA"))
+snow_MOD_sel$date<-as.POSIXct(snow_MOD_sel$date)
+#only select the sites are used for the analysis:
+sel_sites<-unique(df_events_all$sitename)
+snow_MOD_sel<-snow_MOD_sel %>%
+  filter(sitename %in% sel_sites)
+#---merge df_norm_all with snow data:
+#!! the merge does not really mrege the snowval-->do not know exact reason!!
+df_norm_all<-left_join(df_norm_all,snow_MOD_sel[,c("sitename","date","snowval","snowval_QA")])
+#test:
+# df_norm_all%>%
+# group_by(sitename)%>%
+# ggplot(aes(x=date,y=snowval))+
+#   geom_point()+
+#   xlim(0,100)+
+#   facet_wrap(~sitename)
 
 #test!
 df.test<-left_join(df.sep30$noevent_siteyears,sites.info)
@@ -141,7 +162,7 @@ sep_siteyears_data<-function(df.data,dovars,df.sep,leng_threshold,before,after,n
 names(df_norm_all)
 do_vars<-c("gpp_obs","fapar_itpl","fapar_spl",paste0(c("ppfd","PPFD_IN_fullday_mean","temp_day","temp_min","temp_max",
             "vpd_day","prec","patm","SW_IN","ws",paste0("TS_",1:7),paste0("SWC_",1:5)),"_fluxnet2015"),
-           "gcc_90","rcc_90")
+           "gcc_90","rcc_90","snowval")
 #set the before events days from 30 days to 60 days
 df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep30,5,60,0,10,FALSE)
 #calculate the site-years for each group (event and non-event sites):
@@ -301,48 +322,49 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     df.all_q<-ddply(df.all,.(flag,dday),summarize,q10=quantile(comp_var,0.1,na.rm = T),q25=quantile(comp_var,0.25,na.rm = T),
           q50=quantile(comp_var,0.5,na.rm = T),q75=quantile(comp_var,0.75,na.rm = T),q90=quantile(comp_var,0.9,na.rm = T))
     df.all_q_PFTs<-ddply(df.all,.(flag,PFT,dday),summarize,q10=quantile(comp_var,0.1,na.rm = T),q25=quantile(comp_var,0.25,na.rm = T),
-                         q50=quantile(comp_var,0.5,na.rm = T),q75=quantile(comp_var,0.75,na.rm = T),q90=quantile(comp_var,0.9,na.rm = T))
+                         q50=quantile(comp_var,0.5,na.rm = T),q75=quantile(comp_var,0.75,na.rm = T),q90=quantile(comp_var,0.9,na.rm = T),
+                         mean=mean(comp_var,na.rm=T),sd=sd(comp_var,na.rm = T))
     #-----------------------
     #add a additional test-->to compare if the vars are significant different(q50) in two categories
     #----------------------
-    compare_diff<-function(df_comp,sel_perc,flag){
-      # df_comp<-df.all
-      # sel_perc<-1             #which period (percentage of the minimum days) used to compare between vars in two category
-      # flag<-"all"
-
-      df_comp_event<-df_comp[df_comp$flag=="SY_PSB",]
-      df_comp_nonevent<-df_comp[df_comp$flag=="SY_ASB",]
-      #------
-      #select the data
-      #------
-      range_dday_event<-range(df_comp_event$dday)
-      range_dday_nonevent<-range(df_comp_nonevent$dday)
-      range_sel<-c(min(range_dday_event[1],range_dday_nonevent[1]),
-                   floor(sel_perc*min(range_dday_event[2],range_dday_nonevent[2])))
-      #
-      df_comp_event_sel<-subset(df_comp_event,dday>=range_sel[1]&dday<=range_sel[2])
-      df_comp_nonevent_sel<-subset(df_comp_nonevent,dday>=range_sel[1]&dday<=range_sel[2])
-      #additional-->for before events(b0):
-      df_comp_event_b0<-subset(df_comp_event,dday>=range_sel[1]&dday<=0)
-      df_comp_nonevent_b0<-subset(df_comp_nonevent,dday>=range_sel[1]&dday<=0)
-      #make the statistical comparision:
-      if(flag=="q50"){
-        stat.test_1<-difftest_function(df_comp_event_sel$q50,df_comp_nonevent_sel$q50)
-        stat.test_2<-difftest_function(df_comp_event_b0$q50,df_comp_nonevent_b0$q50)
-        stat.test<-cbind(stat.test_1,stat.test_2)
-        names(stat.test)<-c("All selecte period","Before events")
-      }
-      if(flag=="all"){
-        stat.test_1<-difftest_function(df_comp_event_sel$comp_var,df_comp_nonevent_sel$comp_var)
-        stat.test_2<-difftest_function(df_comp_event_b0$comp_var,df_comp_nonevent_b0$comp_var)
-        stat.test<-cbind(stat.test_1,stat.test_2)
-        names(stat.test)<-c("All selecte period","Before events")
-      }
-      return(stat.test)
-    }
-    #
-    stat.alldata_for2<-compare_diff(df.all,1,"all")
-    stat.q50_for2<-compare_diff(df.all_q,1,"q50")
+    # compare_diff<-function(df_comp,sel_perc,flag){
+    #   # df_comp<-df.all
+    #   # sel_perc<-1             #which period (percentage of the minimum days) used to compare between vars in two category
+    #   # flag<-"all"
+    # 
+    #   df_comp_event<-df_comp[df_comp$flag=="SY_PSB",]
+    #   df_comp_nonevent<-df_comp[df_comp$flag=="SY_ASB",]
+    #   #------
+    #   #select the data
+    #   #------
+    #   range_dday_event<-range(df_comp_event$dday)
+    #   range_dday_nonevent<-range(df_comp_nonevent$dday)
+    #   range_sel<-c(min(range_dday_event[1],range_dday_nonevent[1]),
+    #                floor(sel_perc*min(range_dday_event[2],range_dday_nonevent[2])))
+    #   #
+    #   df_comp_event_sel<-subset(df_comp_event,dday>=range_sel[1]&dday<=range_sel[2])
+    #   df_comp_nonevent_sel<-subset(df_comp_nonevent,dday>=range_sel[1]&dday<=range_sel[2])
+    #   #additional-->for before events(b0):
+    #   df_comp_event_b0<-subset(df_comp_event,dday>=range_sel[1]&dday<=0)
+    #   df_comp_nonevent_b0<-subset(df_comp_nonevent,dday>=range_sel[1]&dday<=0)
+    #   #make the statistical comparision:
+    #   if(flag=="q50"){
+    #     stat.test_1<-difftest_function(df_comp_event_sel$q50,df_comp_nonevent_sel$q50)
+    #     stat.test_2<-difftest_function(df_comp_event_b0$q50,df_comp_nonevent_b0$q50)
+    #     stat.test<-cbind(stat.test_1,stat.test_2)
+    #     names(stat.test)<-c("All selecte period","Before events")
+    #   }
+    #   if(flag=="all"){
+    #     stat.test_1<-difftest_function(df_comp_event_sel$comp_var,df_comp_nonevent_sel$comp_var)
+    #     stat.test_2<-difftest_function(df_comp_event_b0$comp_var,df_comp_nonevent_b0$comp_var)
+    #     stat.test<-cbind(stat.test_1,stat.test_2)
+    #     names(stat.test)<-c("All selecte period","Before events")
+    #   }
+    #   return(stat.test)
+    # }
+    # #
+    # stat.alldata_for2<-compare_diff(df.all,1,"all")
+    # stat.q50_for2<-compare_diff(df.all_q,1,"q50")
     #making the quantile plot using ribbon function:
     p_plot<-ggplot(df.all_q)+
       # annotate("rect",xmin=0,xmax=max(df.all_q$dday),ymin = -Inf,ymax = Inf,alpha=0.2)+
@@ -375,8 +397,8 @@ plot_2groups<-function(df,comp_var,var_unit,do_norm,do_legend){
     #returun object
     out<-c()
     out$data_PFTs<-df.all_q_PFTs #add in May, 2023-->to separate the data in different PFTs
-    out$stats_q50<-stat.q50_for2
-    out$stats_alldata<-stat.alldata_for2
+    # out$stats_q50<-stat.q50_for2
+    # out$stats_alldata<-stat.alldata_for2
     out$plot<-p_plot
     
     return(out)
@@ -431,7 +453,7 @@ p_fapar_itpl_len5_b60<-plot_2groups(df_len5_nonnorm,"fapar_itpl","",do_norm = FA
 #data for different PFTs--->update in May, 2023:
 df.all_q_PFTs<-p_fapar_itpl_len5_b60$data_PFTs
 #making the quantile plot using ribbon function:
-p_plot<-ggplot(df.all_q_PFTs)+
+p_fAPR_PFT<-ggplot(df.all_q_PFTs)+
   # annotate("rect",xmin=0,xmax=max(df.all_q$dday),ymin = -Inf,ymax = Inf,alpha=0.2)+
   #some changes here
   annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
@@ -448,9 +470,114 @@ p_plot<-ggplot(df.all_q_PFTs)+
   theme_classic()+
   theme(legend.position = c(0.1,0.9),legend.background = element_blank(),
         legend.key.size = unit(2, 'lines'),
-        legend.text = element_text(size=20),
-        axis.title = element_text(size=24),
-        axis.text = element_text(size = 20))+
+        legend.text = element_text(size=18),
+        axis.title = element_text(size=20),
+        axis.text = element_text(size = 18),
+        #increase the facet label font
+        strip.text.x = element_text(size=20)
+        )+
   theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
   xlim(-60,70)  #add x range in 2021-09-25
+
+##add the d,e,f indicate the panels:
+dat_text<-data.frame(label=c("a","b","c"),classid=c("DBF","ENF","MF"),
+                     x=rep(-58,3),y=rep(0.9,3))
+# dat_text$parameter<-factor(dat_text$parameter,levels = c("tau","X0","Smax"))
+p_fAPR_PFT<-p_fAPR_PFT+geom_text(
+  data=dat_text,
+  size=6,col="black",
+  mapping = aes(x=x,y=y,label=c(rep("a",3),rep("b",3),rep("c",3))) #interesting-->need to add 3
+)+
+theme(axis.title.x = element_blank())
+#------------------
+#III. snow in different PFTs
+#------------------
+#contrast for snow infomation for "event(GPP overestimation)" site and "nonevent" site
+snow_MOD_sel$snowval[!is.na(snow_MOD_sel$snowval)]
+##
+event_siteyear<-df.sep30$event_siteyears%>%
+  mutate(siteyear=paste0(sitename,"-",Year))
+nonevent_siteyear<-df.sep30$noevent_siteyears%>%
+  mutate(siteyear=paste0(sitename,"-",Year))
+
+#
+snow_event_siteyear<-snow_MOD_sel%>%
+  mutate(year=year(date),siteyear=paste0(sitename,"-",year))%>%
+  filter(siteyear %in% unique(event_siteyear$siteyear))
+
+snow_nonevent_siteyear<-snow_MOD_sel%>%
+  mutate(year=year(date),siteyear=paste0(sitename,"-",year))%>%
+  filter(siteyear %in% unique(nonevent_siteyear$siteyear))
+
+#adding the site PFT:
+snow_event_siteyear<-left_join(snow_event_siteyear,sites.info[,c("sitename","classid")])
+snow_event_siteyear$flag<-rep("SY_PSB",nrow(snow_event_siteyear))
+#
+snow_nonevent_siteyear<-left_join(snow_nonevent_siteyear,sites.info[,c("sitename","classid")])
+snow_nonevent_siteyear$flag<-rep("SY_ASB",nrow(snow_nonevent_siteyear))
+#------------roughly adding the mean sos values:
+df_events_all_sel<-df_events_all[,c("sitename","Year",'sos',"peak")]
+names(df_events_all_sel)<-c("sitename","year",'sos',"peak")
+snow_event_siteyear<-left_join(snow_event_siteyear,df_events_all_sel)
+snow_nonevent_siteyear<-left_join(snow_nonevent_siteyear,df_events_all_sel)
+
+#merge
+df.all_snow<-rbind(snow_event_siteyear,snow_nonevent_siteyear)
+
+#---plotting----
+df.all_snow_mean_PFT<-df.all_snow %>%
+  mutate(doy=yday(date))%>%
+  group_by(classid,flag,doy)%>%
+  dplyr::summarise(snow_frac=mean(snowval,na.rm=T),
+                   snow_frac_sd=sd(snowval,na.rm=T),
+                   sos_mean=round(mean(sos,na.rm=T),0),
+                   peak_mean=round(mean(peak,na.rm=T),0))%>%
+  mutate(rday=doy-sos_mean)
+  
+
+#data for different PFTs--->update in May, 2023:
+#making the quantile plot using ribbon function:
+p_snow_PFT<-df.all_snow_mean_PFT%>%
+  group_by(classid)%>%
+  ggplot()+
+  annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
+  geom_point(aes(x=rday,y=snow_frac,col=flag),size=1.05)+
+  scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"),
+                     labels=c(expression(SY[DSPR]),expression(SY[0])))+ ##add subscript in the legend
+  # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
+  geom_ribbon(aes(x=rday,ymin=snow_frac-snow_frac_sd,ymax=snow_frac+snow_frac_sd,fill=flag),alpha=0.4)+
+  scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"),
+                    labels=c(expression(SY[DSPR]),expression(SY[0])))+
+  ylab("Snow fraction (%)")+
+  xlab("rday")+
+  facet_wrap( ~classid) +
+  theme_classic()+
+  theme(legend.position = c(0.1,0.9),legend.background = element_blank(),
+        legend.key.size = unit(2, 'lines'),
+        legend.text = element_text(size=18),
+        axis.title = element_text(size=20),
+        axis.text = element_text(size = 18),
+        strip.text.x = element_text(size=20))+
+  theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
+  xlim(-60,70)  #add x range 
+#
+##add the d,e,f indicate the panels:
+dat_text<-data.frame(label=c("d","e","f"),classid=c("DBF","ENF","MF"),
+                     x=rep(-58,3),y=rep(90,3))
+# dat_text$parameter<-factor(dat_text$parameter,levels = c("tau","X0","Smax"))
+p_snow_PFT<-p_snow_PFT+geom_text(
+  data=dat_text,
+  size=6,col="black",
+  mapping = aes(x=x,y=y,label=label)
+)+
+theme(legend.position =  "none")
+
+##merge fAPAR and snow fraction:
+plot_merge<-cowplot::plot_grid(p_fAPR_PFT,p_snow_PFT,
+          ncol = 1,labels = "auto",label_size = 20,align = "hv")
+#save the plots:
+save.path<-"./manuscript/figures/"
+ggsave(paste0(save.path,"FigureS_fAPAR_snow.png"),plot_merge,
+       width = 15,height = 10)
+
 

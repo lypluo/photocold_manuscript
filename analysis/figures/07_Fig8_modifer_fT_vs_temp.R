@@ -252,11 +252,11 @@ plot_fT_greenup<-ggplot()+
   xlab(expression(T[min]*" (°C)"))+
   ylab(expression(f[T]))+
   theme(
-    legend.text = element_text(size=22),
+    legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 22),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
@@ -278,16 +278,15 @@ plot_fT_notgreenup<-ggplot()+
   xlab(expression(T[min]*" (°C)"))+
   ylab(expression(f[T]))+
   theme(
-    legend.text = element_text(size=22),
+    legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 22),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
   )
-
 #-------
 #B.for different season:
 #------
@@ -313,11 +312,11 @@ plot_fT_spring<-ggplot()+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.position = "none",
-    legend.text = element_text(size=22),
+    legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 20),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
@@ -340,11 +339,12 @@ plot_fT_winter<-ggplot()+
   ylab(expression("winter  "*f[T]))+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
-    legend.text = element_text(size=22),
+    legend.position = "none",
+    legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 20),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
@@ -362,7 +362,8 @@ plot_data_new_test<-left_join(plot_data_winter,plot_data_spring)
 plot_winterT_springfT<-ggplot()+
   geom_point(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT),size=4)+
   geom_text_repel(data = plot_data_new_test,aes(x=tmin_min,y=fT,col=PFT,label=sitename),size=4)+
-  scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  # scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
+  khroma::scale_color_highcontrast(aesthetics = "color")+
   geom_smooth(data=plot_data_new_test,aes(x=tmin_min,y=fT),col="blue",
               method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
   stat_poly_eq(data=plot_data_new_test,
@@ -377,11 +378,11 @@ plot_winterT_springfT<-ggplot()+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.position = "none",
-    legend.text = element_text(size=22),
+    legend.text = element_text(size=20),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 20),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
@@ -432,6 +433,7 @@ plot_winterT_GPPbia_prior<-ggplot()+
   scale_color_manual(values = c("DBF"="orange","MF"="cyan","ENF"="magenta"))+
   geom_smooth(data=df_winterTmin_bias_prior,aes(x=tmin_min,y=gpp_bias_rel),col="blue",
               method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  khroma::scale_color_highcontrast(aesthetics = "color")+
   stat_poly_eq(data=df_winterTmin_bias_prior,
                aes(x=tmin_min,y=gpp_bias_rel,
                    label = paste(
@@ -449,9 +451,9 @@ plot_winterT_GPPbia_prior<-ggplot()+
     legend.direction = "horizontal",
     legend.text = element_text(size=16),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 20),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
@@ -467,6 +469,7 @@ plot_winterT_GPPbias_post<-ggplot()+
   #update in Jan,2023
   # geom_smooth(data=df_winterTmin_bias_post,aes(x=tmin_min,y=gpp_bias_rel_optim),col="white",se=FALSE,
   #             method = "lm",formula = y ~ x,lty=2,fill=adjustcolor("steelblue2",0.2))+
+  khroma::scale_color_highcontrast(aesthetics = "color")+
   stat_poly_eq(data=df_winterTmin_bias_post,
                aes(x=tmin_min,y=gpp_bias_rel_optim,
                    label = paste(
@@ -479,18 +482,20 @@ plot_winterT_GPPbias_post<-ggplot()+
   ylab(expression("GPP"[post-bias]*" (%)"))+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
+    # legend.position = c(0.7,0.75),
     legend.position = "none",
     legend.background = element_blank(),
     legend.direction = "horizontal",
     legend.text = element_text(size=16),
     legend.key.size = unit(2, 'lines'),
-    axis.title = element_text(size=26),
-    axis.text = element_text(size = 20),
-    text = element_text(size=24),
+    axis.title = element_text(size=20),
+    axis.text = element_text(size = 18),
+    text = element_text(size=18),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
   )
+
 
 
 ##merge the plots:

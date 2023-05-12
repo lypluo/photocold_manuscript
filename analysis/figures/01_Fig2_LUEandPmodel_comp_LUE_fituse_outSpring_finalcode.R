@@ -11,8 +11,8 @@ library(lme4)
 library(tidyverse)
 # remotes::install_github("computationales/ingestr") #install the package
 library(ingestr)
-# devtools::load_all("D:/Github/rbeni/")
-library(rbeni)
+devtools::load_all("D:/Github/rbeni/")
+# library(rbeni)
 library(plotrix) #calculate the standard error 
 
 #-----------------

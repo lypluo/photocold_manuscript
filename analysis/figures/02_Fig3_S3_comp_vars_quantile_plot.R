@@ -40,6 +40,18 @@ load(paste0(load.path,"ddf_labeled_norm_trs_newmethod_all_overestimation_Fluxnet
 df_all_sites<-ddf_labeled;rm(ddf_labeled) 
 df_norm_all<-df_all_sites
 
+##-->update in May,2023-->also add the snow data from modis
+snow.path<-"./data-raw/raw_data/snow_data/"
+load(paste0(snow.path,"snow_MOD.RDA"))
+snow_MOD_sel$date<-as.POSIXct(snow_MOD_sel$date)
+#only select the sites are used for the analysis:
+sel_sites<-unique(df_events_all$sitename)
+snow_MOD_sel<-snow_MOD_sel %>%
+  filter(sitename %in% sel_sites)
+#---merge df_norm_all with snow data:
+#!! the merge does not really mrege the snowval-->do not know exact reason!!
+df_norm_all<-left_join(df_norm_all,snow_MOD_sel[,c("sitename","date","snowval","snowval_QA")])
+
 #-------------------------------------------------------------------------
 #(2)start to align the data according to Beni's functions of "align_events" and "get_consecutive"
 #-------------------------------------------------------------------------
@@ -392,7 +404,7 @@ p_LUE_len5_b60<-plot_2groups(df_len5_nonnorm,"LUE","",do_norm = FALSE,TRUE)
 # p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"ppfd_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = TRUE)
 p_ppfd_len5_b60<-plot_2groups(df_len5_nonnorm,"PPFD_IN_fullday_mean_fluxnet2015","(u mol m-2 s-1)",do_norm = FALSE,do_legend = FALSE)
 #fapar_spl and fapar_itpl
-p_fapar_itpl_len5_b60<-plot_2groups(df_len5_nonnorm,"fapar_itpl","",do_norm = FALSE,do_legend = FALSE)
+p_fapar_itpl_len5_b60<-plot_2groups(df_len5_nonnorm,"fapar_itpl","",do_norm = FALSE,do_legend = TRUE)
 #some modifying in the plot:
 p_gpp_obs_len5_b60$plot<-p_gpp_obs_len5_b60$plot+
   xlab("")+
@@ -543,8 +555,81 @@ save.path<-"./manuscript/figures/"
 # ggsave(paste0(save.path,"p_VIs.png"),p_merge_VIs,width = 15,height = 10)
 # 
 ###------------newly merge plots-------------
-#update in March, 2022
+#update in March and May, 2022
 #---------------------------
+#also adding the snow information:
+#contrast for snow infomation for "event(GPP overestimation)" site and "nonevent" site
+snow_MOD_sel$snowval[!is.na(snow_MOD_sel$snowval)]
+##
+df.sep30<-sep_siteyears(df_events_all,"Over_days_length",30)
+
+event_siteyear<-df.sep30$event_siteyears%>%
+  mutate(siteyear=paste0(sitename,"-",Year))
+nonevent_siteyear<-df.sep30$noevent_siteyears%>%
+  mutate(siteyear=paste0(sitename,"-",Year))
+
+#
+snow_event_siteyear<-snow_MOD_sel%>%
+  mutate(year=year(date),siteyear=paste0(sitename,"-",year))%>%
+  filter(siteyear %in% unique(event_siteyear$siteyear))
+
+snow_nonevent_siteyear<-snow_MOD_sel%>%
+  mutate(year=year(date),siteyear=paste0(sitename,"-",year))%>%
+  filter(siteyear %in% unique(nonevent_siteyear$siteyear))
+
+#adding the site PFT:
+#load the site infos:(including the PFTs and Cimate info)
+load(paste0("./data-raw/raw_data/sites_info/","Pre_selected_sites_info.RDA"))
+sites.info<-df_sites_sel;rm(df_sites_sel)
+snow_event_siteyear<-left_join(snow_event_siteyear,sites.info[,c("sitename","classid")])
+snow_event_siteyear$flag<-rep("SY_PSB",nrow(snow_event_siteyear))
+#
+snow_nonevent_siteyear<-left_join(snow_nonevent_siteyear,sites.info[,c("sitename","classid")])
+snow_nonevent_siteyear$flag<-rep("SY_ASB",nrow(snow_nonevent_siteyear))
+#------------roughly adding the mean sos values:
+df_events_all_sel<-df_events_all[,c("sitename","Year",'sos',"peak")]
+names(df_events_all_sel)<-c("sitename","year",'sos',"peak")
+snow_event_siteyear<-left_join(snow_event_siteyear,df_events_all_sel)
+snow_nonevent_siteyear<-left_join(snow_nonevent_siteyear,df_events_all_sel)
+#merge
+df.all_snow<-rbind(snow_event_siteyear,snow_nonevent_siteyear)
+
+#---plotting----
+df.all_snow_mean_PFT<-df.all_snow %>%
+  mutate(doy=yday(date))%>%
+  group_by(classid,flag,doy)%>%
+  dplyr::summarise(snow_frac=mean(snowval,na.rm=T),
+                   snow_frac_sd=sd(snowval,na.rm=T),
+                   sos_mean=round(mean(sos,na.rm=T),0),
+                   peak_mean=round(mean(peak,na.rm=T),0))%>%
+  mutate(rday=doy-sos_mean)
+
+
+#data for different PFTs--->update in May, 2023:
+#making the quantile plot using ribbon function:
+p_snow_PFT<-df.all_snow_mean_PFT%>%
+  ggplot()+
+  annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
+  geom_point(aes(x=rday,y=snow_frac,col=flag),size=1.05)+
+  scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"),
+                     labels=c(expression(SY[DSPR]),expression(SY[0])))+ ##add subscript in the legend
+  # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
+  geom_ribbon(aes(x=rday,ymin=snow_frac-snow_frac_sd,ymax=snow_frac+snow_frac_sd,fill=flag),alpha=0.4)+
+  scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"),
+                    labels=c(expression(SY[DSPR]),expression(SY[0])))+
+  ylab("Snow fraction (%)")+
+  xlab("rday")+
+  theme_classic()+
+  theme(legend.position = "none",legend.background = element_blank(),
+        legend.key.size = unit(2, 'lines'),
+        legend.text = element_text(size=18),
+        axis.title = element_text(size=20),
+        axis.text = element_text(size = 18),
+        strip.text.x = element_text(size=20))+
+  theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
+  xlim(-60,70)  #add x range 
+
+#
 p_merge_new<-plot_grid(
   p_gpp_obs_len5_b60$plot,p_LUE_len5_b60$plot,p_gpp_biaes_len5_b60$plot,
   p_ppfd_len5_b60$plot,p_fapar_itpl_len5_b60$plot,p_temp_min_len5_b60$plot,
@@ -556,15 +641,16 @@ p_merge_new<-plot_grid(
 #need to note-->we only use the first layer Tsoil-->
 #if all the layer Tsoil are available, the results might be different
 p_merge_1<-plot_grid(
-  p_LUE_len5_b60$plot,
+  # p_LUE_len5_b60$plot,
   #update in May, 2023:
   p_fapar_itpl_len5_b60$plot,
   p_ppfd_len5_b60$plot,
   p_temp_min_len5_b60$plot,
   p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
+  p_snow_PFT,
   labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
-ggsave(paste0(save.path,"Figure3_LUE_fAPAR_ppfd_Tmin_Tsoil_SWC.png"),p_merge_1,
+ggsave(paste0(save.path,"Figure3_LUE_fAPAR_ppfd_Tmin_Tsoil_SWC_snow.png"),p_merge_1,
        width = 15,height = 10)
 
 #Figure Sxx:

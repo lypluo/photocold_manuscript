@@ -250,7 +250,7 @@ gg2 <- tmp |>
 
 cowplot::plot_grid(gg1, gg2, ncol = 1, labels = c("a", "b"))
 ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.pdf", width = 12, height = 10)
-ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.png", width = 12, height = 10)
+# ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.png", width = 12, height = 10)
 
 
 tmp |> 
@@ -335,6 +335,7 @@ norm_to_peak <- function(df, mod, obs){
 }
 
 ddf_norm <- ddf %>% 
+  mutate(lue_pmodel=gpp_pmodel/c(PPFD_IN_fullday_mean_fluxnet2015*fapar_itpl))%>%
   group_by(sitename) %>% 
   nest() %>% 
   mutate(data = purrr::map(data, ~norm_to_peak(., "gpp_pmodel", "gpp_obs"))) %>% 
@@ -344,6 +345,21 @@ ddf_norm <- ddf %>%
   mutate(data = purrr::map(data, ~norm_to_peak(., "gpp_lue_const", "gpp_obs"))) %>% 
   mutate(data = purrr::map(data, ~norm_to_peak(., "gpp_temp_vpd", "gpp_obs"))) %>% 
   mutate(data = purrr::map(data, ~norm_to_peak(., "gpp_lmer", "gpp_obs"))) %>% 
+  unnest(data)
+
+ddf_norm_lue <- ddf %>% 
+  mutate(lue_pmodel=gpp_pmodel/c(PPFD_IN_fullday_mean_fluxnet2015*fapar_itpl))%>%
+  #update in May, 2023-->remove the inf value in LUE
+  filter(is.finite(lue_pmodel) & is.finite(lue_lmer))%>%
+  filter(lue_pmodel>-0.1 & lue_pmodel<0.08)%>%
+  filter(lue_lmer>-0.1 & lue_lmer<0.08)%>%
+  # filter(lue_pmodel>0 & lue_lmer>0)%>%
+  group_by(sitename) %>% 
+  nest() %>% 
+  #add in May, 2023:
+  mutate(data = purrr::map(data, ~norm_to_peak(., "lue_pmodel", "lue"))) %>% 
+  mutate(data = purrr::map(data, ~norm_to_peak(., "lue_temp_vpd", "lue"))) %>% 
+  mutate(data = purrr::map(data, ~norm_to_peak(., "lue_lmer", "lue"))) %>% 
   unnest(data)
 
 ### Plot normalised by site
@@ -408,7 +424,10 @@ sites.info<-df_sites_sel;rm(df_sites_sel)
 ddf_norm<-left_join(ddf_norm,sites.info)
 ddf_norm<-ddf_norm %>%
   mutate(Clim_PFTs=paste0(koeppen_code,"-",classid))
-
+#add in May, 2023:
+ddf_norm_lue<-left_join(ddf_norm_lue,sites.info)
+ddf_norm_lue<-ddf_norm_lue %>%
+  mutate(Clim_PFTs=paste0(koeppen_code,"-",classid))
 #check sites in different Clim.-PFTs
 sites.info%>%
   mutate(Clim_PFTs=paste0(koeppen_code,"-",classid)) %>%
@@ -443,22 +462,118 @@ sites.info%>%
 
 df_meandoy_norm_Clim_PFTs <- ddf_norm %>%
   filter(sitename!="JP-MBF" & sitename!="US-NR1" & sitename!="US-PFa")%>% ##remove the sites do not performed when lmer
-  #update in May, 2023:adding the gpp_bias
-  mutate(gpp_bias_pmodel=gpp_pmodel - gpp_obs,gpp_bias_lmer=gpp_lmer - gpp_obs)%>%
   group_by(Clim_PFTs, doy) %>% 
   dplyr::summarise(
     gpp_obs_min=min(gpp_obs,na.rm = T),
     gpp_obs_max=max(gpp_obs,na.rm = T),
     gpp_obs_sd=sd(gpp_obs,na.rm = T),
     gpp_obs_mean=mean(gpp_obs,na.rm=T),
+    lue_obs_sd=sd(lue,na.rm = T),
+    lue_obs_mean=mean(lue,na.rm=T),
     #add sos_mean and eos_mean
     sos_mean=round(mean(sos,na.rm=T),0),
     peak_min=round(min(peak,na.rm=T),0),
     fapar = mean(fapar_itpl, na.rm = TRUE),
-    across(starts_with("gpp_"), mean, na.rm = TRUE)) %>%
-  
+    across(starts_with("gpp_"), mean, na.rm = TRUE),
+    across(starts_with("lue"),mean,na.rm=TRUE)
+    ) %>%
   #add in May,2023
   mutate(avg_period = ifelse(doy >= sos_mean & doy <= peak_min, TRUE, FALSE))
+
+df_meandoy_norm_Clim_PFTs_lue <- ddf_norm_lue %>%
+  filter(sitename!="JP-MBF" & sitename!="US-NR1" & sitename!="US-PFa")%>% ##remove the sites do not performed when lmer
+  #update in May, 2023:adding the LUE
+  group_by(Clim_PFTs, doy) %>% 
+  dplyr::summarise(
+    lue_obs_sd=sd(lue,na.rm = T),
+    lue_obs_mean=mean(lue,na.rm=T),
+    #add sos_mean and eos_mean
+    sos_mean=round(mean(sos,na.rm=T),0),
+    peak_min=round(min(peak,na.rm=T),0),
+    fapar = mean(fapar_itpl, na.rm = TRUE),
+    across(starts_with("lue"),mean,na.rm=TRUE)
+  ) %>%
+  #add in May,2023
+  mutate(avg_period = ifelse(doy >= sos_mean & doy <= peak_min, TRUE, FALSE))
+#------------------
+#update in May,2023-->add LUE plots:
+#------------------
+plot_final_lue_1 <- df_meandoy_norm_Clim_PFTs_lue %>% 
+  # filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
+  mutate(lue_obs=lue,lue=NULL)%>%
+  pivot_longer(c(lue_obs, lue_pmodel,lue_temp_vpd,lue_lmer), names_to = "model", values_to = "lue") %>%
+  mutate(model = fct_relevel(model, "lue_obs", "lue_pmodel","lue_temp_vpd","lue_lmer")) %>%
+  dplyr::filter((model %in% c( "lue_obs", "lue_pmodel","lue_lmer"))) %>% ##select the lmer
+  ggplot() +
+  geom_line(aes(x = doy, y = lue, color = model),size=0.8) +
+  geom_ribbon(aes(x=doy,ymin=lue_obs_mean - lue_obs_sd,ymax=lue_obs_mean + lue_obs_sd),fill="black",alpha=0.3)+
+  labs(y = expression( paste("lue (g C m"^-2, " d"^-1, ")" ) ),
+       x = "DoY") +
+  # facet_wrap( ~Clim_PFTs, ncol = 3, scales = "free_y" ) +
+  facet_wrap( ~Clim_PFTs) +
+  ylim(0,0.05)+
+  # theme_gray() +
+  # theme(legend.position = "bottom") +
+  # scale_color_manual(
+  #   name="Model: ",
+  #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
+  scale_color_manual("lue sources",values = c("lue_obs" = "black",
+                                              "lue_pmodel" = "orange", "lue_lmer" = "brown2"),
+                     labels = c(expression(lue[obs]),expression(lue[Pmodel]),expression(lue[LME])))+
+  # labels = c("Observations","P-model","LME")) +
+  theme(
+    legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=24),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white"),
+    # legend.background = element_blank(),
+    legend.position = c(0.75,0.1)
+  )+
+  theme(legend.text.align = 0)  #align the legend 
+
+#
+plot_final_lue_2 <- df_meandoy_norm_Clim_PFTs_lue %>% 
+  # filter(!is.nan(gpp_lmer) & !is.infinite(gpp_lmer))%>% ##this filter is important
+  mutate(lue_obs=lue,lue=NULL)%>%
+  pivot_longer(c(lue_obs, lue_pmodel,lue_temp_vpd,lue_lmer), names_to = "model", values_to = "lue") %>%
+  mutate(model = fct_relevel(model, "lue_obs", "lue_pmodel","lue_temp_vpd","lue_lmer")) %>%
+  dplyr::filter((model %in% c( "lue_obs", "lue_pmodel","lue_lmer"))) %>% ##select the lmer
+  ggplot() +
+  geom_line(aes(x = doy, y = lue, color = model),size=0.8) +
+  geom_ribbon(aes(x=doy,ymin=lue_obs_mean - lue_obs_sd,ymax=lue_obs_mean + lue_obs_sd),fill="black",alpha=0.3)+
+  labs(y = expression( paste("LUE (g C ppfd"^-1*" m"^-2, " d"^-1, ")" ) ),
+       x = "DoY") +
+  # facet_wrap( ~Clim_PFTs, ncol = 3, scales = "free_y" ) +
+  facet_wrap( ~Clim_PFTs) +
+  ylim(0,0.05)+
+  # theme_gray() +
+  # theme(legend.position = "bottom") +
+  # scale_color_manual(
+  #   name="Model: ",
+  #   values=c("black", "red", "royalblue", "darkgoldenrod", "springgreen", "orchid4"))+
+  scale_color_manual("LUE sources",values = c("lue_obs" = "black",
+                                              "lue_pmodel" = "orange", "lue_lmer" = "brown2"),
+                     labels = c(expression(LUE[obs]),expression(LUE[Pmodel]),expression(LUE[LME])))+
+  # labels = c("Observations","P-model","LME")) +
+  theme(
+    legend.text = element_text(size=20),
+    legend.key.size = unit(2, 'lines'),
+    axis.title = element_text(size=24),
+    axis.text = element_text(size = 20),
+    text = element_text(size=24),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(colour ="grey",fill="white"),
+    # legend.background = element_blank(),
+    legend.position = c(0.75,0.1)
+  )+
+  theme(legend.text.align = 0)  #align the legend (all the letter start at the same positoin)
+ggsave("./manuscript/figures/FigureS_gpp_meandoy_norm_forClimPFTs_lue.png",
+       plot_final_lue_2,width = 15,height = 10)
 
 ##following the Wolfhart's suggestion, adding the mean bias betweeen model and obs -> add May,2023
 gpp_mean_bias <- df_meandoy_norm_Clim_PFTs%>%

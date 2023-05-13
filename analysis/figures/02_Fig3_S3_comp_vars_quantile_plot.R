@@ -646,8 +646,8 @@ p_merge_1<-plot_grid(
   p_fapar_itpl_len5_b60$plot,
   p_ppfd_len5_b60$plot,
   p_temp_min_len5_b60$plot,
-  p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
   p_snow_PFT,
+  p_TS_1_len5_b60$plot,p_SWC_1_len5_b60$plot,
   labels = "auto",ncol=3,label_size = 18,align = "hv"
 )
 ggsave(paste0(save.path,"Figure3_LUE_fAPAR_ppfd_Tmin_Tsoil_SWC_snow.png"),p_merge_1,

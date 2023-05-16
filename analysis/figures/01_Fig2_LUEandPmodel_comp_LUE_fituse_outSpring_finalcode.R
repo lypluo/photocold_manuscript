@@ -214,7 +214,10 @@ tmp |>
   labs() +
   labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
        x = "fAPAR bin") +
-  theme_classic()
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size = 12),
+        text = element_text(size=14))
 ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_1.png", width = 12, height = 18)
 
 #### Example ----------
@@ -231,7 +234,11 @@ gg1 <- tmp |>
   labs() +
   labs(y = expression( paste("P-model GPP bias (g C m"^-2, " d"^-1, ")" ) ),
        x = "fAPAR bin") +
-  theme_classic()
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size = 12),
+        text = element_text(size=14))
+
 
 gg2 <- tmp |> 
   filter(sitename %in% c("US-UMd", "IT-Ren")) |> 
@@ -246,7 +253,10 @@ gg2 <- tmp |>
   labs() +
   labs(y = expression( paste("LMM GPP bias (g C m"^-2, " d"^-1, ")" ) ),
        x = "fAPAR bin") +
-  theme_classic()
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size = 12),
+        text = element_text(size=14))
 
 cowplot::plot_grid(gg1, gg2, ncol = 1, labels = c("a", "b"))
 ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.pdf", width = 12, height = 10)
@@ -266,7 +276,10 @@ tmp |>
   labs() +
   labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
        x = "fAPAR bin") +
-  theme_classic()
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size = 12),
+        text = element_text(size=14))
 ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_2.png", width = 12, height = 18)
 
 ### LMM model bias ------------------

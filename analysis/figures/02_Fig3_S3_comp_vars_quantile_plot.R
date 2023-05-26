@@ -416,7 +416,7 @@ p_ppfd_len5_b60$plot<-p_ppfd_len5_b60$plot+
   # xlab("dday")+
   ylab(expression("PAR"*" (u mol "*"m"^-2*" s"^-1*")"))
 p_fapar_itpl_len5_b60$plot<-p_fapar_itpl_len5_b60$plot+
-  xlab("")+
+  xlab("rday")+
   ylim(0.1,1)+
   ylab("fAPAR")
 #--------------
@@ -623,8 +623,8 @@ p_snow_PFT<-df.all_snow_mean_PFT%>%
   theme(legend.position = "none",legend.background = element_blank(),
         legend.key.size = unit(2, 'lines'),
         legend.text = element_text(size=18),
-        axis.title = element_text(size=20),
-        axis.text = element_text(size = 18),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size = 20),
         strip.text.x = element_text(size=20))+
   theme(legend.text.align = 0)+  #align the legend (all the letter start at the same positoin)
   xlim(-60,70)  #add x range 

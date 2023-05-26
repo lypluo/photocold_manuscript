@@ -182,7 +182,7 @@ tmp <- ddf |>
 
 tmp_agg <- tmp |> 
   group_by(sitename, fapar_bin, spring) |> 
-  summarise(res_pmodel = mean(res_pmodel, na.rm = TRUE)) |> 
+  dplyr::summarise(res_pmodel = mean(res_pmodel, na.rm = TRUE)) |> 
   pivot_wider(names_from = c("spring"), values_from = "res_pmodel") |> 
   mutate(diff_spring = `TRUE` - `FALSE`) |> 
   ungroup() |> 
@@ -200,9 +200,37 @@ plot_1 <- ggplot(
 
 
 ## Residual vs fAPAR bin by site -----------------
+#also addd PFT information:
+#load the site infos:
+load(paste0("./data-raw/raw_data/sites_info/","Pre_selected_sites_info.RDA"))
+sites.info<-df_sites_sel;rm(df_sites_sel)
+tmp<-left_join(tmp,sites.info %>% select(sitename,classid))
+
 ### P-model bias ----------------
 tmp |> 
-  filter(sitename %in% unique(tmp$sitename)[1:18]) |> 
+  #update in May, 2023:
+  filter(classid=="DBF")|>
+  # filter(sitename %in% unique(tmp$sitename)[1:18]) |> 
+  ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~sitename, ncol = 3 ) +
+  #labs() +
+  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR") +
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size = 10,angle = -45),
+        text = element_text(size=14))
+ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_1_DBF.png", width = 12, height = 16)
+
+tmp |> 
+  filter(classid=="ENF")|>
+  # filter(sitename %in% unique(tmp$sitename)[19:length(unique(tmp$sitename))]) |> 
   ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
   geom_boxplot(outlier.shape = NA) +
   geom_hline(yintercept = 0, linetype = "dotted") +
@@ -213,12 +241,13 @@ tmp |>
   facet_wrap( ~sitename, ncol = 3 ) +
   labs() +
   labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
-       x = "fAPAR bin") +
+       x = "fAPAR") +
   theme_classic()+
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size = 12),
+        axis.text = element_text(size = 10,angle = -45),
         text = element_text(size=14))
-ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_1.png", width = 12, height = 18)
+ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_2_ENF.png", width = 12, height = 18)
+
 
 #### Example ----------
 gg1 <- tmp |> 
@@ -233,10 +262,10 @@ gg1 <- tmp |>
   facet_wrap( ~sitename, ncol = 3 ) +
   labs() +
   labs(y = expression( paste("P-model GPP bias (g C m"^-2, " d"^-1, ")" ) ),
-       x = "fAPAR bin") +
+       x = "") +
   theme_classic()+
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size = 12),
+        axis.text = element_text(size = 12,angle = 20),
         text = element_text(size=14))
 
 
@@ -251,36 +280,18 @@ gg2 <- tmp |>
   ) +
   facet_wrap( ~sitename, ncol = 3 ) +
   labs() +
-  labs(y = expression( paste("LMM GPP bias (g C m"^-2, " d"^-1, ")" ) ),
-       x = "fAPAR bin") +
+  labs(y = expression( paste("LME GPP bias (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR") +
   theme_classic()+
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size = 12),
+        axis.text = element_text(size = 12,angle = 20),
         text = element_text(size=14))
 
-cowplot::plot_grid(gg1, gg2, ncol = 1, labels = c("a", "b"))
-ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.pdf", width = 12, height = 10)
+p_example<-cowplot::plot_grid(gg1, gg2, ncol = 1, labels = c("a", "b"))
+ggsave(filename = "./manuscript/figures/FigADD_residual_fapar_EXAMPLE.png",
+       p_example, width = 13.5, height = 10)
 # ggsave("./manuscript/figures/FigADD_residual_fapar_EXAMPLE.png", width = 12, height = 10)
 
-
-tmp |> 
-  filter(sitename %in% unique(tmp$sitename)[19:length(unique(tmp$sitename))]) |> 
-  ggplot(aes(x = fapar_bin, y = res_pmodel, fill = spring)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_hline(yintercept = 0, linetype = "dotted") +
-  scale_fill_manual(
-    name="Spring",
-    values=c("#777055ff", "#29a274ff")
-  ) +
-  facet_wrap( ~sitename, ncol = 3 ) +
-  labs() +
-  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
-       x = "fAPAR bin") +
-  theme_classic()+
-  theme(axis.title = element_text(size=14),
-        axis.text = element_text(size = 12),
-        text = element_text(size=14))
-ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_2.png", width = 12, height = 18)
 
 ### LMM model bias ------------------
 tmp |> 
@@ -361,6 +372,7 @@ ddf_norm <- ddf %>%
   unnest(data)
 
 ddf_lue<-ddf %>% 
+  filter(PPFD_IN_fullday_mean_fluxnet2015>0)%>%
   mutate(lue_pmodel=gpp_pmodel/c(PPFD_IN_fullday_mean_fluxnet2015*fapar_itpl))%>%
   #update in May, 2023-->remove the inf value in LUE
   filter(is.finite(lue_pmodel) & is.finite(lue_lmer))%>%

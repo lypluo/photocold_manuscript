@@ -320,7 +320,7 @@ paras_PFTs_new[paras_PFTs_new$PFT=="ENF",]$x<-1.25
 ##
 paras_PFTs_new$label<-rep("*",nrow(paras_PFTs_new))
 # paras_PFTs_new$col<-c(rep("goldenrod",3),rep("cyan2",3),rep("magenta3",3))
-paras_PFTs_new$col<-c(rep("darkblue",3),rep("orange",3),rep("tomato",3))
+paras_PFTs_new$col<-c(rep("dodgerblue4",3),rep("gold3",3),rep("indianred3",3))
 
 #
 # paras_PFTs_new$PFT<-factor(paras_PFTs_new$PFT,levels = c("DBF","MF","ENF"))
@@ -442,14 +442,14 @@ plot_paras<-function(df_meteo,df_paras,Env_var,para,do_legend){
     )
   if(para=="tau"){
     pars_final<-pars_final+
-    stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
-                     aes(x=Env_var,y=para,col=PFT),
-                     fill=adjustcolor("steelblue2"),method = "lm",formula = y ~ x,lty=2,
-                     show_guide=FALSE)+
-    stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
-                     aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("gold"),
-                     method = "lm",formula = y ~ x,lty=2,
-                     show_guide = FALSE)+
+    # stat_poly_line(data=df_site_level_new[df_site_level_new$PFT=='DBF',],
+    #                  aes(x=Env_var,y=para,col=PFT),
+    #                  fill=adjustcolor("steelblue2"),method = "lm",formula = y ~ x,lty=2,
+    #                  show_guide=FALSE)+
+    # stat_poly_line(data=df_site_level_new[df_site_level_new$Clim.PFTs=='Dfc-ENF',],
+    #                  aes(x=Env_var,y=para,col=PFT),fill=adjustcolor("gold"),
+    #                  method = "lm",formula = y ~ x,lty=2,
+    #                  show_guide = FALSE)+
     annotate(geom = "text",x=10.1,y=24,label = paste0("italic(R) ^ 2 == ",
                       stat_DBF_label$r.squared),parse=TRUE,col="steelblue4",size=7)+
     annotate(geom = "text",x=14,y=24,label = paste0("italic(p) ==",

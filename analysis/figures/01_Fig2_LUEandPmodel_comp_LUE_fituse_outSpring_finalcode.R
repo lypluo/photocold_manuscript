@@ -557,16 +557,24 @@ tmp |>
   geom_boxplot(outlier.shape = NA) +
   geom_hline(yintercept = 0, linetype = "dotted") +
   scale_fill_manual(
-    name="Spring",
+    name="January-June",
     values=c("#777055ff", "#29a274ff")
   ) +
-  facet_wrap( ~Clim_PFTs, ncol = 3 ) +
+  facet_wrap( ~Clim_PFTs, ncol = 4, scales = "free_y" ) +
   labs() +
-  labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+  labs(y = expression( paste("GPP model bias (g C m"^-2, " d"^-1, ")" ) ),
        x = "fAPAR bin") +
-  theme_classic()
+  theme_classic() +
+  theme(
+    legend.position = c(0.75,0.1),
+    strip.background = element_rect(fill = "grey70"),
+    axis.text.x = element_text(angle = 90)
+    # panel.grid.major = element_blank(),
+    # panel.grid.minor = element_blank(),
+    # panel.background = element_rect(colour ="grey",fill="white"),
+  )
 
-ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_ClimPFT.png", width = 12, height = 12)
+ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_ClimPFT.png", width = 12, height = 8)
 
 
 ### LME model bias ----------------
@@ -586,6 +594,7 @@ tmp |>
   theme(
     legend.position = c(0.75,0.1),
     strip.background = element_rect(fill = "grey70"),
+    axis.text.x = element_text(angle = 90)
     # panel.grid.major = element_blank(),
     # panel.grid.minor = element_blank(),
     # panel.background = element_rect(colour ="grey",fill="white"),

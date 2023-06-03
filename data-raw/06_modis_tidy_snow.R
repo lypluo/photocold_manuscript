@@ -45,9 +45,27 @@ names(snow_MOD_sel)<-c("sitename","latitude","longtitude","date",
 # to be simple-->just keep the values when values <=100-->other set to NA
 snow_MOD_sel<-snow_MOD_sel%>%
   mutate(snowval=ifelse(snowval<=100,snowval,NA))
-
 #---------------------
-#3)save the data
+#3)extrapolate the snow data
+#---------------------
+library(lubridate)
+library(zoo)
+snow_MOD_sel<-snow_MOD_sel %>%
+  mutate(date=as.Date(date),
+         year=year(date),
+         doy=yday(date))%>%
+  group_by(sitename,year)%>%
+  mutate(snowval_fill=na.fill(snowval,"extend"))
+
+##example plot:
+snow_MOD_sel %>%
+  filter(sitename=="BE-Bra")%>%
+  ggplot()+
+  geom_point(aes(x=date,y=snowval_fill),col="red")+
+  geom_point(aes(x=date,y=snowval))
+  
+#---------------------
+#4)save the data
 #---------------------
 save.path<-"./data-raw/raw_data/snow_data/"
 save(snow_MOD_sel,file = paste0(save.path,"snow_MOD.RDA"))

@@ -50,7 +50,8 @@ snow_MOD_sel<-snow_MOD_sel %>%
   filter(sitename %in% sel_sites)
 #---merge df_norm_all with snow data:
 #!! the merge does not really mrege the snowval-->do not know exact reason!!
-df_norm_all<-left_join(df_norm_all,snow_MOD_sel[,c("sitename","date","snowval","snowval_QA")])
+df_norm_all<-left_join(df_norm_all,snow_MOD_sel[,c("sitename","date",
+                                    "snowval","snowval_fill","snowval_QA")])
 
 #-------------------------------------------------------------------------
 #(2)start to align the data according to Beni's functions of "align_events" and "get_consecutive"
@@ -597,9 +598,17 @@ df.all_snow<-rbind(snow_event_siteyear,snow_nonevent_siteyear)
 #---plotting----
 df.all_snow_mean_PFT<-df.all_snow %>%
   mutate(doy=yday(date))%>%
-  group_by(classid,flag,doy)%>%
-  dplyr::summarise(snow_frac=mean(snowval,na.rm=T),
-                   snow_frac_sd=sd(snowval,na.rm=T),
+  group_by(flag,doy)%>%
+  # dplyr::summarise(snow_frac=mean(snowval,na.rm=T),
+  #                  snow_frac_sd=sd(snowval,na.rm=T),
+  #                  sos_mean=round(mean(sos,na.rm=T),0),
+  #                  peak_mean=round(mean(peak,na.rm=T),0))%>%
+  #update in June, 2023==>using snowval_QA
+  dplyr::summarise(snow_frac=mean(snowval_fill,na.rm=T),
+                   snow_frac_sd=sd(snowval_fill,na.rm=T),
+                   #adding in June,2023
+                   q10=quantile(snowval_fill,probs=0.1,na.rm=T),
+                   q90=quantile(snowval_fill,probs=0.9,na.rm=T),
                    sos_mean=round(mean(sos,na.rm=T),0),
                    peak_mean=round(mean(peak,na.rm=T),0))%>%
   mutate(rday=doy-sos_mean)
@@ -610,10 +619,10 @@ df.all_snow_mean_PFT<-df.all_snow %>%
 p_snow_PFT<-df.all_snow_mean_PFT%>%
   ggplot()+
   annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
-  geom_point(aes(x=rday,y=snow_frac,col=flag),size=1.05)+
+  geom_line(aes(x=rday,y=snow_frac,col=flag),size=1.05)+
   scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"),
                      labels=c(expression(SY[DSPR]),expression(SY[0])))+ ##add subscript in the legend
-  # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
+  # geom_ribbon(aes(x=rday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+
   geom_ribbon(aes(x=rday,ymin=snow_frac-snow_frac_sd,ymax=snow_frac+snow_frac_sd,fill=flag),alpha=0.4)+
   scale_fill_manual("",values = c("SY_PSB"="red","SY_ASB"="dodgerblue"),
                     labels=c(expression(SY[DSPR]),expression(SY[0])))+

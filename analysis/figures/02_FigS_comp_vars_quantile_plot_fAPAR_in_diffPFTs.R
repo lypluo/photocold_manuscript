@@ -53,14 +53,15 @@ df_norm_all<-df_norm_all %>%
 ##-->update in May,2023-->also add the snow data from modis
 snow.path<-"./data-raw/raw_data/snow_data/"
 load(paste0(snow.path,"snow_MOD.RDA"))
-snow_MOD_sel$date<-as.POSIXct(snow_MOD_sel$date)
+# snow_MOD_sel$date<-as.POSIXct(snow_MOD_sel$date)
 #only select the sites are used for the analysis:
 sel_sites<-unique(df_events_all$sitename)
 snow_MOD_sel<-snow_MOD_sel %>%
   filter(sitename %in% sel_sites)
 #---merge df_norm_all with snow data:
 #!! the merge does not really mrege the snowval-->do not know exact reason!!
-df_norm_all<-left_join(df_norm_all,snow_MOD_sel[,c("sitename","date","snowval","snowval_QA")])
+df_norm_all<-left_join(df_norm_all,snow_MOD_sel[,c("sitename",
+                "date","snowval","snowval_fill","snowval_QA")])
 #test:
 # df_norm_all%>%
 # group_by(sitename)%>%
@@ -162,7 +163,7 @@ sep_siteyears_data<-function(df.data,dovars,df.sep,leng_threshold,before,after,n
 names(df_norm_all)
 do_vars<-c("gpp_obs","fapar_itpl","fapar_spl",paste0(c("ppfd","PPFD_IN_fullday_mean","temp_day","temp_min","temp_max",
             "vpd_day","prec","patm","SW_IN","ws",paste0("TS_",1:7),paste0("SWC_",1:5)),"_fluxnet2015"),
-           "gcc_90","rcc_90","snowval")
+           "gcc_90","rcc_90","snowval","snowval_fill")
 #set the before events days from 30 days to 60 days
 df_len5_nonnorm<-sep_siteyears_data(df_norm_all,do_vars,df.sep30,5,60,0,10,FALSE)
 #calculate the site-years for each group (event and non-event sites):
@@ -528,8 +529,8 @@ df.all_snow<-rbind(snow_event_siteyear,snow_nonevent_siteyear)
 df.all_snow_mean_PFT<-df.all_snow %>%
   mutate(doy=yday(date))%>%
   group_by(classid,flag,doy)%>%
-  dplyr::summarise(snow_frac=mean(snowval,na.rm=T),
-                   snow_frac_sd=sd(snowval,na.rm=T),
+  dplyr::summarise(snow_frac=mean(snowval_fill,na.rm=T),
+                   snow_frac_sd=sd(snowval_fill,na.rm=T),
                    sos_mean=round(mean(sos,na.rm=T),0),
                    peak_mean=round(mean(peak,na.rm=T),0))%>%
   mutate(rday=doy-sos_mean)
@@ -541,7 +542,7 @@ p_snow_PFT<-df.all_snow_mean_PFT%>%
   group_by(classid)%>%
   ggplot()+
   annotate("rect",xmin=0,xmax=70,ymin = -Inf,ymax = Inf,alpha=0.2)+
-  geom_point(aes(x=rday,y=snow_frac,col=flag),size=1.05)+
+  geom_line(aes(x=rday,y=snow_frac,col=flag),size=1.05)+
   scale_color_manual("",values = c("SY_PSB"="red","SY_ASB"="blue"),
                      labels=c(expression(SY[DSPR]),expression(SY[0])))+ ##add subscript in the legend
   # geom_ribbon(aes(x=dday,ymin=q10,ymax=q90,fill=flag),alpha=0.15)+

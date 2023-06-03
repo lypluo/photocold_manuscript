@@ -497,6 +497,8 @@ df_meandoy_norm_Clim_PFTs <- ddf_norm %>%
   filter(sitename!="JP-MBF" & sitename!="US-NR1" & sitename!="US-PFa")%>% ##remove the sites do not performed when lmer
   group_by(Clim_PFTs, doy) %>% 
   dplyr::summarise(
+    gpp_bias_pmodel=gpp_pmodel - gpp_obs,
+    gpp_bias_lmer=gpp_lmer - gpp_obs,
     gpp_obs_min=min(gpp_obs,na.rm = T),
     gpp_obs_max=max(gpp_obs,na.rm = T),
     gpp_obs_sd=sd(gpp_obs,na.rm = T),
@@ -737,8 +739,30 @@ tmp |>
   facet_wrap( ~Clim_PFTs, ncol = 2 ) +
   labs() +
   labs(y = expression( paste("P-model GPP residual (g C m"^-2, " d"^-1, ")" ) ),
-       x = "fAPAR bin") +
-  theme_classic()
+       x = "fAPAR") +
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size = 10,angle = 20),
+        text = element_text(size=14))
 
-ggsave("./manuscript/figures/FigADD_residual_fapar_pmodel_ClimPFT.png", width = 12, height = 12)
+ggsave("./manuscript/figures/Fig3_residual_fapar_pmodel_ClimPFT.png", width = 12, height = 12)
 
+### LME bias ----------------
+tmp |> 
+  ggplot(aes(x = fapar_bin, y = res_lmm, fill = spring)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_fill_manual(
+    name="Spring",
+    values=c("#777055ff", "#29a274ff")
+  ) +
+  facet_wrap( ~Clim_PFTs, ncol = 2 ) +
+  labs() +
+  labs(y = expression( paste("LME GPP residual (g C m"^-2, " d"^-1, ")" ) ),
+       x = "fAPAR") +
+  theme_classic()+
+  theme(axis.title = element_text(size=14),
+        axis.text.x = element_text(size = 10,angle = 20),
+        text = element_text(size=14))
+
+ggsave("./manuscript/figures/FigADD_residual_fapar_LME_ClimPFT.png", width = 12, height = 12)

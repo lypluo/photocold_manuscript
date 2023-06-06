@@ -374,7 +374,7 @@ plot_winterT_springfT<-ggplot()+
                      sep = "*\", \"*"),
                ),col="blue")+
   xlab(expression("winter  "*T[min]*" (°C)"))+
-  ylab(expression("spring  "*f[T]))+
+  ylab(expression("Mean spring  "*f[T]))+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
     legend.position = "none",
@@ -442,11 +442,12 @@ plot_winterT_GPPbia_prior<-ggplot()+
                      sep = "*\", \"*"),
                ),col="blue")+
   xlab(expression("winter  "*T[min]*" (°C)"))+
-  ylab(expression("GPP"[prior-bias]*" (%)"))+
+  ylab(expression("Rel. bias in GPP"[Pmodel]*" (%)"))+
   # geom_hline(yintercept = 1,lty=2)+
+  ylim(-30,150)+
   theme(
-    legend.position = c(0.7,0.75),
-    # legend.position = "none",
+    # legend.position = c(0.7,0.75),
+    legend.position = "none",
     legend.background = element_blank(),
     legend.direction = "horizontal",
     legend.text = element_text(size=16),
@@ -479,11 +480,12 @@ plot_winterT_GPPbias_post<-ggplot()+
                ),label.y = 0.85,
                col="blue")+
   xlab(expression("winter  "*T[min]*" (°C)"))+
-  ylab(expression("GPP"[post-bias]*" (%)"))+
+  ylab(expression("Rel. bias in GPP"[adj]*" (%)"))+
+  ylim(-30,150)+
   # geom_hline(yintercept = 1,lty=2)+
   theme(
-    # legend.position = c(0.7,0.75),
-    legend.position = "none",
+    legend.position = c(0.7,0.75),
+    # legend.position = "none",
     legend.background = element_blank(),
     legend.direction = "horizontal",
     legend.text = element_text(size=16),
@@ -495,8 +497,6 @@ plot_winterT_GPPbias_post<-ggplot()+
     panel.grid.minor = element_blank(),
     panel.background = element_rect(colour ="grey",fill="white")
   )
-
-
 
 ##merge the plots:
 library(cowplot)
@@ -524,5 +524,5 @@ plot_fT<-plot_grid(plot_winterT_springfT,
 
 #save the plot
 save.path<-"./manuscript/figures/"
-ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias_new.png"),plot_fT,height = 11,width = 9)
+ggsave(paste0(save.path,"Figure8_fT_vs_Ta_bias_new.png"),plot_fT,height = 13,width = 9)
 

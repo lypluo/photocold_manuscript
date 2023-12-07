@@ -18,10 +18,10 @@ plot_map_simpl <- function(lonmin = -180, lonmax = 180, latmin =30, latmax = 85)
   library(rnaturalearth)
   library(sf)
   #
-  # lonmin= -180
-  # lonmax = 180
-  # latmin=30
-  # latmax=80 ##latmax should be higher 75
+  lonmin= -30
+  lonmax = 60
+  latmin=30
+  latmax=80 ##latmax should be higher 75
   
   # download global coastline data from naturalearth
   countries <- rnaturalearth::ne_countries(scale = 110, returnclass = "sf")

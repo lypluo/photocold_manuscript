@@ -681,6 +681,14 @@ p_merge_S_albedo<-plot_grid(
 #save abledo from SW
 ggsave(paste0(save.path,"FigureS_albedo_SW.png"),p_albedo_SW_len5_b60$plot)
 
+##adding at Dec,2023-->for AGU:
+p_1<-p_ppfd_len5_b60$plot+
+  xlab("")
+p_2<-p_temp_min_len5_b60$plot+
+  xlab("")
+p_ppt<-plot_grid(p_1,p_2)
+ggsave(paste0(save.path,"Figure_for_AGU.png"),p_ppt)
+
 #--------------
 #IV.stats-->difference test
 #-------------
